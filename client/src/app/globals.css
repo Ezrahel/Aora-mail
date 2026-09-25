@@ -1,0 +1,215 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────
+   Apple Design Paradigm — Aora
+   Liquid Glass · Depth · Motion · Vibrancy
+   Inspired by iOS 26 / macOS Tahoe
+   Open-source refs:
+   - motiondivision/motion (framer-motion)
+   - pmndrs/react-three-fiber (3D depth — CSS fallback used)
+   - johannschopplich/mesh-gradient (mesh backgrounds)
+   ───────────────────────────────────────────── */
+
+:root {
+  /* Core — Apple + Aora */
+  --color-ink: #0a0a0f;
+  --color-ink-soft: #1c1c1e;
+  --color-muted: #6e6e73;
+  --color-muted-2: #86868b;
+  --color-white: #ffffff;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-strong: rgba(0, 0, 0, 0.12);
+  --color-surface: #f5f5f7;
+  --color-surface-2: #fbfbfd;
+  --color-danger: #ff3b30;
+  --color-warning: #ff9f0a;
+
+  /* Aora — #16FF00 variants (primary) */
+  --accent: #16ff00;
+  --accent-50: #e8ffe6;
+  --accent-100: #ccffcc;
+  --accent-200: #99ff99;
+  --accent-300: #66ff66;
+  --accent-400: #33ff33;
+  --accent-500: #16ff00;
+  --accent-600: #12cc00;
+  --accent-700: #0f9900;
+  --accent-800: #0a6600;
+  --accent-900: #0a1f0a;
+  --accent-glow: 22 255 0;
+  /* Enough colors — CEO/CFO palette (Apple system) */
+  --apple-blue: #0a84ff;
+  --apple-blue-soft: #e5f2ff;
+  --apple-purple: #bf5af2;
+  --apple-purple-soft: #f5e8ff;
+  --apple-pink: #ff375f;
+  --apple-pink-soft: #ffe8ed;
+  --apple-orange: #ff9f0a;
+  --apple-orange-soft: #fff4e5;
+  --apple-teal: #64d2ff;
+  --apple-teal-soft: #e6f7ff;
+  --apple-yellow: #ffd60a;
+  --apple-indigo: #5e5ce6;
+
+  --background: #fbfbfd;
+  --foreground: var(--color-ink);
+
+  /* Apple radius + depth */
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-3xl: 40px;
+  --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-float: 0 20px 60px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ink: var(--color-ink);
+  --color-muted: var(--color-muted);
+  --color-accent: var(--accent);
+  --color-border: var(--color-border);
+  --color-surface: var(--color-surface);
+  --color-danger: var(--color-danger);
+  --color-warning: var(--color-warning);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: rgba(var(--accent-glow) / 0.25);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--apple-blue);
+  outline-offset: 2px;
+}
+
+/* ── Liquid Glass — Apple iOS 26 / VisionOS ── */
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-glass);
+}
+
+.glass-dark {
+  background: rgba(28, 28, 30, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--shadow-float);
+}
+
+.glass-accent {
+  background: linear-gradient(135deg, rgba(22, 255, 0, 0.14), rgba(22, 255, 0, 0.04));
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(22, 255, 0, 0.18);
+}
+
+/* Mesh gradient — open source mesh-gradient */
+.mesh-bg {
+  background:
+    radial-gradient(at 20% 20%, rgba(22, 255, 0, 0.25) 0%, transparent 50%),
+    radial-gradient(at 80% 20%, rgba(10, 132, 255, 0.18) 0%, transparent 50%),
+    radial-gradient(at 40% 80%, rgba(191, 90, 242, 0.15) 0%, transparent 50%),
+    radial-gradient(at 90% 90%, rgba(255, 159, 10, 0.12) 0%, transparent 40%),
+    radial-gradient(at 10% 90%, rgba(100, 210, 255, 0.14) 0%, transparent 40%),
+    linear-gradient(180deg, #fbfbfd 0%, #f5f5f7 100%);
+}
+
+.mesh-bg-dark {
+  background:
+    radial-gradient(at 20% 20%, rgba(22, 255, 0, 0.35) 0%, transparent 50%),
+    radial-gradient(at 80% 10%, rgba(10, 132, 255, 0.22) 0%, transparent 50%),
+    radial-gradient(at 50% 80%, rgba(191, 90, 242, 0.18) 0%, transparent 50%),
+    linear-gradient(180deg, #0a0a0f 0%, #1c1c1e 100%);
+}
+
+/* Apple depth layers */
+.depth-1 { box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04); }
+.depth-2 { box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06); }
+.depth-3 { box-shadow: var(--shadow-soft); }
+.depth-float { box-shadow: var(--shadow-float); }
+
+/* Apple typography scale */
+.text-display {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+}
+.text-title {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+/* Animations — spring-like */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(0.5deg); }
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.6; filter: blur(20px); }
+  50% { opacity: 1; filter: blur(24px); }
+}
+@keyframes mesh-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(20px, -20px) scale(1.05); }
+  66% { transform: translate(-15px, 10px) scale(0.98); }
+}
+
+.float { animation: float 6s ease-in-out infinite; }
+.glow-pulse { animation: glow-pulse 4s ease-in-out infinite; }
+
+/* Scrollbar — Apple */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+
+/* Focus ring — Apple blue */
+.ring-apple:focus-visible { outline: 2px solid var(--apple-blue); outline-offset: 2px; }
+
+/* Noise texture — subtle Apple */
+.noise::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
+  pointer-events: none;
+  border-radius: inherit;
+}
