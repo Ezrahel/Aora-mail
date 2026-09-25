@@ -1,0 +1,461 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────
+enum DomainStatus {
+  pending
+  provisioning
+  dns_pending
+  verifying
+  verified
+  active
+  error
+  suspended
+}
+
+enum MailboxStatus {
+  pending
+  active
+  suspended
+  error
+}
+
+enum DnsRecordType {
+  MX
+  TXT
+  CNAME
+  A
+  SRV
+}
+
+enum DnsStatus {
+  missing
+  pending
+  configured
+  verified
+  error
+}
+
+enum SubscriptionStatus {
+  trialing
+  active
+  past_due
+  cancelled
+  expired
+  suspended
+  incomplete
+}
+
+enum PaymentStatus {
+  pending
+  success
+  failed
+  abandoned
+}
+
+enum InvoiceStatus {
+  draft
+  pending
+  paid
+  failed
+  void
+}
+
+enum ProvisioningJobStatus {
+  queued
+  processing
+  completed
+  failed
+  retrying
+  cancelled
+}
+
+enum ProvisioningJobType {
+  create_domain
+  verify_domain
+  create_mailbox
+  delete_mailbox
+  suspend_mailbox
+  unsuspend_mailbox
+  create_forwarder
+  sync_usage
+  configure_dns
+}
+
+enum AuditAction {
+  USER_REGISTERED
+  USER_LOGIN
+  DOMAIN_ADDED
+  DOMAIN_VERIFIED
+  DOMAIN_DELETED
+  MAILBOX_CREATED
+  MAILBOX_SUSPENDED
+  MAILBOX_UNSUSPENDED
+  MAILBOX_DELETED
+  FORWARDER_CREATED
+  FORWARDER_DELETED
+  PLAN_CHANGED
+  PAYMENT_COMPLETED
+  PAYMENT_FAILED
+  SUBSCRIPTION_CREATED
+  SUBSCRIPTION_CANCELLED
+  DNS_CONFIGURED
+  PROVISIONING_FAILED
+  PROVISIONING_COMPLETED
+}
+
+enum Role {
+  owner
+  admin
+  member
+}
+
+// ─────────────────────────────────────────────
+// Models
+// ─────────────────────────────────────────────
+
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  name             String
+  passwordHash     String
+  emailVerified    Boolean  @default(false)
+  emailVerifyToken String?  @unique
+  resetToken       String?  @unique
+  resetTokenExpiry DateTime?
+  failedLoginAttempts Int @default(0)
+  lockedUntil      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  memberships OrganizationMember[]
+  auditLogs   AuditLog[]
+  supportTickets SupportTicket[]
+
+  @@index([email])
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members       OrganizationMember[]
+  domains       Domain[]
+  mailboxes     Mailbox[]
+  subscriptions Subscription[]
+  invoices      Invoice[]
+  payments      Payment[]
+  providerAccounts ProviderAccount[]
+  auditLogs     AuditLog[]
+  dnsConnections DnsProviderConnection[]
+
+  @@index([slug])
+}
+
+model OrganizationMember {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  role           Role     @default(owner)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model Plan {
+  id                 String   @id @default(cuid())
+  name               String
+  slug               String   @unique
+  description        String?
+  annualPrice        Int // kobo (NGN * 100)
+  monthlyPrice       Int? // kobo
+  maxMailboxes       Int
+  mailboxQuotaGb     Int
+  maxDomains         Int
+  aliasesAllowed     Boolean @default(true)
+  forwardingAllowed  Boolean @default(true)
+  migrationIncluded  Boolean @default(false)
+  isActive           Boolean @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id             String             @id @default(cuid())
+  organizationId String
+  planId         String
+  status         SubscriptionStatus @default(incomplete)
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  trialEndsAt    DateTime?
+  cancelledAt    DateTime?
+  gracePeriodEndsAt DateTime?
+  paystackSubscriptionCode String? @unique
+  paystackEmailToken String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan         Plan         @relation(fields: [planId], references: [id])
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model Domain {
+  id             String       @id @default(cuid())
+  name           String       @unique
+  organizationId String
+  status         DomainStatus @default(pending)
+  provider       String       @default("mxroute")
+  providerDomainId String?
+  verificationKey String?
+  verifiedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  mailboxes    Mailbox[]
+  forwarders   Forwarder[]
+  dnsRecords   DnsRecord[]
+  provisioningJobs ProvisioningJob[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model Mailbox {
+  id                String        @id @default(cuid())
+  organizationId    String
+  domainId          String
+  provider          String        @default("mxroute")
+  providerMailboxId String?       @unique
+  email             String        @unique
+  localPart         String
+  quotaBytes        BigInt
+  usedBytes         BigInt        @default(0)
+  allocatedQuotaBytes BigInt
+  status            MailboxStatus @default(pending)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  domain       Domain       @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([domainId])
+  @@index([email])
+}
+
+model Forwarder {
+  id           String   @id @default(cuid())
+  organizationId String
+  domainId     String
+  source       String
+  destination  String
+  providerForwarderId String? @unique
+  createdAt    DateTime @default(now())
+
+  domain Domain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@unique([domainId, source])
+  @@index([organizationId])
+}
+
+model DnsRecord {
+  id           String       @id @default(cuid())
+  domainId     String
+  type         DnsRecordType
+  host         String
+  value        String
+  priority     Int?
+  ttl          Int          @default(3600)
+  status       DnsStatus    @default(pending)
+  purpose      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  domain Domain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@index([domainId])
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  organizationId   String
+  subscriptionId   String?
+  amount           Int // kobo
+  currency         String        @default("NGN")
+  status           PaymentStatus @default(pending)
+  provider         String        @default("paystack")
+  providerReference String       @unique
+  paystackReference String?      @unique
+  idempotencyKey   String?       @unique
+  verified         Boolean       @default(false)
+  metadata         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  organizationId String
+  subscriptionId String?
+  number         String        @unique
+  amount         Int // kobo
+  currency       String        @default("NGN")
+  status         InvoiceStatus @default(pending)
+  description    String?
+  dueDate        DateTime?
+  paidAt         DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model ProviderAccount {
+  id             String   @id @default(cuid())
+  organizationId String
+  provider       String
+  externalId     String?
+  credentialsRef String? // reference to secret manager, not raw credentials
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider])
+}
+
+model DnsProviderConnection {
+  id             String   @id @default(cuid())
+  organizationId String
+  provider       String   @default("cloudflare")
+  zoneId         String?
+  apiTokenRef    String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model ProvisioningJob {
+  id             String                @id @default(cuid())
+  organizationId String
+  domainId       String?
+  mailboxId      String?
+  type           ProvisioningJobType
+  status         ProvisioningJobStatus @default(queued)
+  payload        Json?
+  result         Json?
+  error          String?
+  attempts       Int                   @default(0)
+  maxAttempts    Int                   @default(5)
+  idempotencyKey String                @unique
+  lockedAt       DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  domain Domain? @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([organizationId])
+}
+
+model WebhookEvent {
+  id               String   @id @default(cuid())
+  provider         String
+  providerEventId  String   @unique
+  eventType        String
+  payload          Json
+  processed        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([provider])
+  @@index([processed])
+}
+
+model AuditLog {
+  id             String      @id @default(cuid())
+  organizationId String?
+  actorId        String?
+  action         AuditAction
+  resourceType   String?
+  resourceId     String?
+  metadata       Json?
+  requestId      String?
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actor        User?         @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model SupportTicket {
+  id             String   @id @default(cuid())
+  organizationId String?
+  userId         String
+  subject        String
+  message        String
+  status         String   @default("open")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UsageSnapshot {
+  id             String   @id @default(cuid())
+  organizationId String
+  mailboxId      String?
+  domainId       String?
+  usedBytes      BigInt
+  quotaBytes     BigInt
+  mailboxCount   Int
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([createdAt])
+}
+
+model EmailMigration {
+  id             String   @id @default(cuid())
+  organizationId String
+  domainId       String
+  status         String   @default("pending")
+  sourceProvider String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
