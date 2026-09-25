@@ -7,7 +7,7 @@ import { env } from './config/env';
 import { logger } from './common/logging/logger';
 import { requestIdMiddleware } from './common/middleware/request-id';
 import { errorHandler } from './common/middleware/error-handler';
-import { generalLimiter, loginLimiter, registerLimiter } from './common/middleware/rate-limit';
+import { generalLimiter, loginLimiter, registerLimiter, domainVerifyLimiter, mailboxCreateLimiter, paymentLimiter } from './common/middleware/rate-limit';
 import { authMiddleware, loadUserMiddleware } from './common/middleware/auth';
 
 import { authRouter } from './modules/auth/auth.router';
@@ -18,6 +18,7 @@ import { mailboxesRouter } from './modules/mailboxes/mailboxes.router';
 import { forwardersRouter } from './modules/forwarders/forwarders.router';
 import { dnsRouter } from './modules/dns/dns.router';
 import { subscriptionsRouter, invoicesRouter } from './modules/subscriptions/subscriptions.router';
+import { paymentsRouter } from './modules/payments/payments.router';
 import { webhooksRouter } from './modules/webhooks/webhooks.router';
 import { usageRouter } from './modules/usage/usage.router';
 import { adminRouter } from './modules/admin/admin.router';
@@ -81,6 +82,32 @@ export function createApp(): express.Express {
   app.use(`${v1Prefix}/auth/register`, registerLimiter);
   app.use(`${apiPrefix}/auth/login`, loginLimiter);
   app.use(`${v1Prefix}/auth/login`, loginLimiter);
+  // Forgotten password & password reset
+  app.use(`${apiPrefix}/auth/forgot-password`, generalLimiter);
+  app.use(`${v1Prefix}/auth/forgot-password`, generalLimiter);
+  // Domain verification
+  app.use(`${apiPrefix}/domains`, (req, res, next) => {
+    if (req.path.endsWith('/verify') && req.method === 'POST') return domainVerifyLimiter(req, res, next);
+    return next();
+  });
+  app.use(`${v1Prefix}/domains`, (req, res, next) => {
+    if (req.path.endsWith('/verify') && req.method === 'POST') return domainVerifyLimiter(req, res, next);
+    return next();
+  });
+  // Mailbox creation
+  app.use(`${apiPrefix}/mailboxes`, (req, res, next) => {
+    if (req.method === 'POST' && req.path === '/') return mailboxCreateLimiter(req, res, next);
+    return next();
+  });
+  app.use(`${v1Prefix}/mailboxes`, (req, res, next) => {
+    if (req.method === 'POST' && req.path === '/') return mailboxCreateLimiter(req, res, next);
+    return next();
+  });
+  // Payments
+  app.use(`${apiPrefix}/payments`, paymentLimiter);
+  app.use(`${v1Prefix}/payments`, paymentLimiter);
+  app.use(`${apiPrefix}/subscriptions/checkout`, paymentLimiter);
+  app.use(`${v1Prefix}/subscriptions/checkout`, paymentLimiter);
   app.use(generalLimiter);
 
   function mount(path: string, router: express.Router): void {
@@ -99,6 +126,7 @@ export function createApp(): express.Express {
   mount('/subscription', subscriptionsRouter);
   mount('/invoices', invoicesRouter);
   mount('/billing/invoices', invoicesRouter);
+  mount('/payments', paymentsRouter);
   mount('/webhooks', webhooksRouter);
   mount('/usage', usageRouter);
 
