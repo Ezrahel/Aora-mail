@@ -9,7 +9,7 @@ mailboxesRouter.use(authMiddleware, loadUserMiddleware, requireAuth);
 
 mailboxesRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { page, limit } = paginationSchema.parse(req.query);
+    const { page, limit } = paginationSchema.parse(req.query as any);
     // Support both paginated and non-paginated (frontend expects array for dashboard)
     const wantsPagination = req.query.page !== undefined || req.query.limit !== undefined;
     if (!wantsPagination) {
@@ -45,21 +45,21 @@ mailboxesRouter.post('/', async (req: Request, res: Response, next: NextFunction
 
 mailboxesRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const mailbox = await mailboxesService.getMailbox(req.params.id, req.organizationId!);
+    const mailbox = await mailboxesService.getMailbox((req.params.id as string), req.organizationId!);
     res.json({ data: mailbox, meta: {} });
   } catch (err) { next(err); }
 });
 
 mailboxesRouter.get('/:id/connection', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const details = await mailboxesService.getConnectionDetails(req.params.id, req.organizationId!);
+    const details = await mailboxesService.getConnectionDetails((req.params.id as string), req.organizationId!);
     res.json({ data: details, meta: {} });
   } catch (err) { next(err); }
 });
 
 mailboxesRouter.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await mailboxesService.deleteMailbox(req.params.id, req.organizationId!, req.user!.id);
+    await mailboxesService.deleteMailbox((req.params.id as string), req.organizationId!, req.user!.id);
     res.json({ data: { success: true }, message: 'Mailbox deleted.', meta: {} });
   } catch (err) { next(err); }
 });
@@ -71,35 +71,35 @@ mailboxesRouter.patch('/:id', async (req: Request, res: Response, next: NextFunc
     const qb = quotaBytes ?? (quotaGb ? quotaGb * 1024 * 1024 * 1024 : undefined);
     if (qb) {
       const { prisma } = await import('../../lib/prisma');
-      const mailbox = await prisma.mailbox.findFirst({ where: { id: req.params.id, organizationId: req.organizationId! } });
+      const mailbox = await prisma.mailbox.findFirst({ where: { id: (req.params.id as string), organizationId: req.organizationId! } });
       if (!mailbox) throw new Error('Mailbox not found');
       // Update via provider
       const { emailProvider } = await import('../../providers/email/mxroute/mxroute.provider');
       if (mailbox.providerMailboxId) await emailProvider.updateMailbox({ providerMailboxId: mailbox.providerMailboxId, quotaBytes: qb });
-      await prisma.mailbox.update({ where: { id: req.params.id }, data: { quotaBytes: BigInt(qb), allocatedQuotaBytes: BigInt(qb) } });
+      await prisma.mailbox.update({ where: { id: (req.params.id as string) }, data: { quotaBytes: BigInt(qb), allocatedQuotaBytes: BigInt(qb) } });
     }
-    const updated = await mailboxesService.getMailbox(req.params.id, req.organizationId!);
+    const updated = await mailboxesService.getMailbox((req.params.id as string), req.organizationId!);
     res.json({ data: updated, meta: {} });
   } catch (err) { next(err); }
 });
 
 mailboxesRouter.post('/:id/suspend', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const mailbox = await mailboxesService.suspendMailbox(req.params.id, req.organizationId!, req.user!.id);
+    const mailbox = await mailboxesService.suspendMailbox((req.params.id as string), req.organizationId!, req.user!.id);
     res.json({ data: mailbox, meta: {} });
   } catch (err) { next(err); }
 });
 
 mailboxesRouter.post('/:id/unsuspend', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const mailbox = await mailboxesService.unsuspendMailbox(req.params.id, req.organizationId!, req.user!.id);
+    const mailbox = await mailboxesService.unsuspendMailbox((req.params.id as string), req.organizationId!, req.user!.id);
     res.json({ data: mailbox, meta: {} });
   } catch (err) { next(err); }
 });
 
 mailboxesRouter.post('/:id/reset-password', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await mailboxesService.resetMailboxPassword(req.params.id, req.organizationId!);
+    const result = await mailboxesService.resetMailboxPassword((req.params.id as string), req.organizationId!);
     res.json({ data: result, message: 'Password reset. Share this temporary password securely.', meta: {} });
   } catch (err) { next(err); }
 });

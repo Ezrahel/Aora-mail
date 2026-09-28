@@ -9,7 +9,7 @@ export const PLANS: Plan[] = [
     id: "plan_starter",
     name: "Starter",
     slug: "starter",
-    priceYearlyNgn: 15_000,
+    priceYearlyNgn: 8_000,
     mailboxLimit: 1,
     storageGbPerMailbox: 5,
     features: [
@@ -25,7 +25,7 @@ export const PLANS: Plan[] = [
     id: "plan_business",
     name: "Business",
     slug: "business",
-    priceYearlyNgn: 30_000,
+    priceYearlyNgn: 20_000,
     mailboxLimit: 5,
     storageGbPerMailbox: 10,
     features: [
@@ -42,7 +42,7 @@ export const PLANS: Plan[] = [
     id: "plan_pro",
     name: "Pro",
     slug: "pro",
-    priceYearlyNgn: 50_000,
+    priceYearlyNgn: 30_000,
     mailboxLimit: 10,
     storageGbPerMailbox: 15,
     features: [

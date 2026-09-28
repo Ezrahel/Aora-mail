@@ -21,7 +21,7 @@ export async function getMetrics(): Promise<unknown> {
     prisma.payment.count({ where: { status: 'failed' } }),
     prisma.provisioningJob.count({ where: { status: 'failed' } }),
     prisma.mailbox.aggregate({ _sum: { usedBytes: true, quotaBytes: true } }),
-    prisma.domain.count({ where: { status: { in: ['verified', 'active'] } }),
+    prisma.domain.count({ where: { status: { in: ['verified', 'active'] } } }),
     prisma.user.count(),
     prisma.invoice.count({ where: { status: 'paid' } }),
     prisma.subscription.count({ where: { status: 'cancelled' } }),

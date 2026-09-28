@@ -12,7 +12,7 @@ plansRouter.get('/', async (_req: Request, res: Response, next: NextFunction) =>
 
 plansRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const plan = await plansService.getPlanById(req.params.id);
+    const plan = await plansService.getPlanById((req.params.id as string));
     if (!plan) {
       res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Plan not found.' } });
       return;

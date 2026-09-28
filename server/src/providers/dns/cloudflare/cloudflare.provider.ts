@@ -92,12 +92,11 @@ export class CloudflareDnsProvider implements DnsProvider {
   }
 
   async verifyDomain(input: VerifyDomainInput): Promise<VerificationResult> {
-    // Compare expected vs actual via Cloudflare or fallback DNS lookup
     let actualRecords: DnsRecord[] = [];
     try {
       actualRecords = await this.getRecords(input.domain);
-    } catch {
-      // If Cloudflare not connected, return pending for all
+    } catch (err) {
+      logger.warn({ err: String(err), domain: input.domain }, 'Cloudflare getRecords failed, falling back to pending');
       return {
         domain: input.domain,
         verified: false,
@@ -105,12 +104,20 @@ export class CloudflareDnsProvider implements DnsProvider {
       };
     }
 
+    const normalize = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
     const results = input.expectedRecords.map((expected) => {
-      const found = actualRecords.find((a) => a.type === expected.type && a.host.includes(expected.host) && a.value.trim() === expected.value.trim());
-      return { record: expected, status: found ? 'verified' as const : 'missing' as const, actual: found?.value };
+      const expectedHost = expected.host === '@' ? input.domain : `${expected.host}.${input.domain}`;
+      const found = actualRecords.find((a) => {
+        if (a.type !== expected.type) return false;
+        const actualHost = a.host.toLowerCase().replace(/\.$/, '');
+        if (actualHost !== expectedHost.toLowerCase() && !actualHost.endsWith(`.${expected.host.toLowerCase()}`) && a.host !== expected.host) return false;
+        return normalize(a.value) === normalize(expected.value) || normalize(a.value).includes(normalize(expected.value));
+      });
+      return { record: expected, status: found ? ('verified' as const) : ('missing' as const), actual: found?.value };
     });
 
-    const verified = results.every((r) => r.status === 'verified');
+    const required = results.filter((r) => r.record.host !== '_dmarc');
+    const verified = required.length ? required.every((r) => r.status === 'verified') : results.every((r) => r.status === 'verified');
     return { domain: input.domain, verified, records: results };
   }
 
@@ -129,29 +136,88 @@ export class ManualDnsProvider implements DnsProvider {
   async createRecord(): Promise<DnsRecord & { id: string }> { throw new AppError(400, 'ENTITLEMENT_DENIED', 'Manual DNS requires you to add records at your registrar.'); }
   async updateRecord(): Promise<DnsRecord & { id: string }> { throw new AppError(400, 'ENTITLEMENT_DENIED', 'Manual DNS update not supported.'); }
   async deleteRecord(): Promise<void> { throw new AppError(400, 'ENTITLEMENT_DENIED', 'Manual DNS delete not supported.'); }
+
+  private normalizeTxt(value: string): string {
+    return value.replace(/\s+/g, ' ').trim().replace(/^"|"$/g, '');
+  }
+
+  private async resolveWithTimeout<T>(fn: () => Promise<T>, ms = 4000): Promise<T> {
+    return Promise.race([
+      fn(),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('DNS timeout')), ms)),
+    ]);
+  }
+
   async verifyDomain(input: VerifyDomainInput): Promise<VerificationResult> {
-    // Perform DNS lookup via public DNS (using Node dns promises) — simplified: return pending
-    // In production, use dns.resolveTxt / resolveMx
     const { promises: dns } = await import('dns');
     const results: VerificationResult['records'] = [];
+
     for (const rec of input.expectedRecords) {
       let status: VerificationResult['records'][number]['status'] = 'pending';
+      let actual: string | undefined;
+      const fqdn = rec.host === '@' ? input.domain : `${rec.host}.${input.domain}`;
+      const expectedNorm = this.normalizeTxt(rec.value);
+
+      // Try system DNS first, then DoH fallback
       try {
         if (rec.type === 'MX') {
-          const mx = await dns.resolveMx(input.domain);
-          const match = mx.some((m) => m.exchange === rec.value || m.exchange.includes(rec.value));
-          status = match ? 'verified' : 'missing';
+          let mx: Array<{ exchange: string; priority: number }> = [];
+          try {
+            mx = await this.resolveWithTimeout(() => dns.resolveMx(input.domain));
+          } catch {
+            // DoH fallback for MX via Cloudflare
+            try {
+              const r = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(input.domain)}&type=MX`, { headers: { accept: 'application/dns-json' } });
+              const j = await r.json() as { Answer?: Array<{ data: string }> };
+              if (j.Answer) mx = j.Answer.map((a) => ({ exchange: a.data.split(' ').pop()?.replace(/\.$/, '') ?? '', priority: parseInt(a.data.split(' ')[0] ?? '10', 10) }));
+            } catch {}
+          }
+          const match = mx.some((m) => m.exchange.toLowerCase() === expectedNorm.toLowerCase() || m.exchange.toLowerCase().includes(expectedNorm.toLowerCase()) || expectedNorm.toLowerCase().includes(m.exchange.toLowerCase()));
+          if (mx.length === 0) status = 'pending';
+          else status = match ? 'verified' : 'missing';
+          actual = mx.map((m) => `${m.priority} ${m.exchange}`).join(', ');
         } else if (rec.type === 'TXT') {
-          const txt = await dns.resolveTxt(rec.host === '@' ? input.domain : `${rec.host}.${input.domain}`);
-          const flat = txt.flat().join(' ');
-          status = flat.includes(rec.value) ? 'verified' : 'missing';
+          let txts: string[][] = [];
+          try {
+            txts = await this.resolveWithTimeout(() => dns.resolveTxt(fqdn));
+          } catch {
+            try {
+              const r = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(fqdn)}&type=TXT`, { headers: { accept: 'application/dns-json' } });
+              const j = await r.json() as { Answer?: Array<{ data: string }> };
+              if (j.Answer) txts = j.Answer.map((a) => [a.data.replace(/^"|"$/g, '').replace(/"; "/g, '')]);
+            } catch {}
+          }
+          const flat = txts.flat().map((s) => this.normalizeTxt(s)).join(' ');
+          actual = flat;
+          if (!txts.length) status = 'pending';
+          else {
+            // For SPF/DKIM, check includes with normalization (case-insensitive for SPF)
+            const includes = flat.toLowerCase().includes(expectedNorm.toLowerCase());
+            const exact = flat === expectedNorm;
+            status = includes || exact ? 'verified' : 'missing';
+          }
+        } else if (rec.type === 'CNAME') {
+          try {
+            const cname = await this.resolveWithTimeout(() => dns.resolveCname(fqdn));
+            actual = cname.join(', ');
+            status = cname.some((c) => c.toLowerCase() === expectedNorm.toLowerCase()) ? 'verified' : 'missing';
+          } catch {
+            status = 'pending';
+          }
+        } else {
+          // For A/CNAME etc., treat as pending if not implemented
+          status = 'pending';
         }
-      } catch {
+      } catch (err) {
+        logger.warn({ err: String(err), domain: input.domain, host: rec.host }, 'DNS verify failed, marking pending for retry');
         status = 'pending';
       }
-      results.push({ record: rec, status });
+      results.push({ record: rec, status, actual });
     }
-    const verified = results.every((r) => r.status === 'verified');
+
+    // Never consider _dmarc missing as blocking for verified if all other records verified
+    const required = results.filter((r) => r.record.host !== '_dmarc');
+    const verified = required.length > 0 ? required.every((r) => r.status === 'verified') : results.every((r) => r.status === 'verified');
     return { domain: input.domain, verified, records: results };
   }
 }

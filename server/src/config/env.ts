@@ -31,6 +31,8 @@ export const env = {
   SUBSCRIPTION_GRACE_PERIOD_DAYS: parseInt(process.env.SUBSCRIPTION_GRACE_PERIOD_DAYS ?? '7', 10),
   USAGE_WARNING_THRESHOLD: parseInt(process.env.USAGE_WARNING_THRESHOLD ?? '70', 10),
   USAGE_CRITICAL_THRESHOLD: parseInt(process.env.USAGE_CRITICAL_THRESHOLD ?? '90', 10),
+  ALLOW_DNS_SIMULATION: process.env.ALLOW_DNS_SIMULATION === 'true',
+  DNS_VERIFICATION_RETRIES: parseInt(process.env.DNS_VERIFICATION_RETRIES ?? '3', 10),
   isProduction: (process.env.NODE_ENV ?? 'development') === 'production',
   isDevelopment: (process.env.NODE_ENV ?? 'development') === 'development',
 };

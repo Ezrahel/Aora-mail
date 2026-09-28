@@ -9,8 +9,8 @@ async function main(): Promise<void> {
       name: 'Starter',
       slug: 'starter',
       description: 'For solo founders and small teams getting started.',
-      annualPrice: 1500000, // ₦15,000 in kobo
-      monthlyPrice: 200000,
+      annualPrice: 800000, // ₦8,000 in kobo
+      monthlyPrice: 120000, // ₦1,200
       maxMailboxes: 1,
       mailboxQuotaGb: 5,
       maxDomains: 1,
@@ -23,8 +23,8 @@ async function main(): Promise<void> {
       name: 'Business',
       slug: 'business',
       description: 'For growing businesses that need more mailboxes.',
-      annualPrice: 3000000,
-      monthlyPrice: 350000,
+      annualPrice: 2000000, // ₦20,000 in kobo
+      monthlyPrice: 280000, // ₦2,800
       maxMailboxes: 5,
       mailboxQuotaGb: 10,
       maxDomains: 2,
@@ -37,8 +37,8 @@ async function main(): Promise<void> {
       name: 'Pro',
       slug: 'pro',
       description: 'For established businesses with larger teams.',
-      annualPrice: 5000000,
-      monthlyPrice: 600000,
+      annualPrice: 3000000, // ₦30,000 in kobo
+      monthlyPrice: 420000, // ₦4,200
       maxMailboxes: 10,
       mailboxQuotaGb: 15,
       maxDomains: 5,

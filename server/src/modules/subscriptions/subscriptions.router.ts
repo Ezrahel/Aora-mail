@@ -47,7 +47,7 @@ invoicesRouter.use(authMiddleware, loadUserMiddleware, requireAuth);
 
 invoicesRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { page, limit } = paginationSchema.parse(req.query);
+    const { page, limit } = paginationSchema.parse(req.query as any);
     const wantsPagination = req.query.page !== undefined;
     const { prisma } = await import('../../lib/prisma');
     if (!wantsPagination) {

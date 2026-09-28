@@ -43,10 +43,12 @@ export async function initializeTransaction(input: { email: string; amountKobo: 
   return json.data;
 }
 
-export async function verifyTransaction(reference: string): Promise<{ status: string; amount: number; paidAt?: string; customerEmail?: string; id: number }> {
+export async function verifyTransaction(reference: string): Promise<{ status: string; amount: number; currency: string; paidAt?: string; customerEmail?: string; id: number }> {
   if (!env.PAYSTACK_SECRET_KEY) {
-    // Mock verify: check reference exists in our DB; caller should handle
-    return { status: 'success', amount: 0, id: 0, customerEmail: '' };
+    // In production, missing secret is fatal; in dev with ALLOW_DNS_SIMULATION we allow mock only for tests
+    if (env.isProduction) throw new AppError(500, 'INTERNAL_ERROR', 'Payment provider not configured');
+    logger.warn({ reference }, 'Paystack secret missing — mock verify (dev only)');
+    return { status: 'success', amount: 0, currency: 'NGN', id: 0, customerEmail: '' };
   }
   const res = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
     headers: { 'Authorization': `Bearer ${env.PAYSTACK_SECRET_KEY}` },
@@ -56,16 +58,33 @@ export async function verifyTransaction(reference: string): Promise<{ status: st
     logger.error({ body, reference }, 'Paystack verify failed');
     throw new AppError(502, 'PAYMENT_VERIFICATION_FAILED', 'Could not verify payment with Paystack.');
   }
-  const json = await res.json() as { status: boolean; data: { status: string; amount: number; paid_at: string; customer: { email: string }; id: number }; message: string };
+  const json = await res.json() as { status: boolean; data: { status: string; amount: number; currency: string; paid_at: string; customer: { email: string }; id: number }; message: string };
   if (!json.status) throw new AppError(502, 'PAYMENT_VERIFICATION_FAILED', json.message);
-  return { status: json.data.status, amount: json.data.amount, paidAt: json.data.paid_at, customerEmail: json.data.customer.email, id: json.data.id };
+  return { status: json.data.status, amount: json.data.amount, currency: json.data.currency ?? 'NGN', paidAt: json.data.paid_at, customerEmail: json.data.customer.email, id: json.data.id };
 }
 
 export function verifyWebhookSignature(rawBody: string | Buffer, signature: string): boolean {
   if (!env.PAYSTACK_WEBHOOK_SECRET) {
+    if (env.isProduction) {
+      logger.error('Paystack webhook secret missing in production — rejecting webhook');
+      return false;
+    }
     logger.warn('Paystack webhook secret missing — skipping signature verification (dev only)');
     return true;
   }
+  if (!signature) return false;
   const hash = crypto.createHmac('sha512', env.PAYSTACK_WEBHOOK_SECRET).update(rawBody).digest('hex');
-  return hash === signature;
+  try {
+    const a = Buffer.from(hash, 'hex');
+    const b = Buffer.from(signature, 'hex');
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    // Fallback to regular compare if hex parsing fails (Paystack sends hex string)
+    try {
+      return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature));
+    } catch {
+      return hash === signature;
+    }
+  }
 }

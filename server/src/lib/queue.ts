@@ -14,7 +14,7 @@ export function getQueue(name: QueueName): Queue | null {
   }
   if (queues.has(name)) return queues.get(name) ?? null;
   try {
-    const queue = new Queue(name, { connection: redis as unknown as ConstructorParameters<typeof Queue>[1] });
+    const queue = new Queue(name, { connection: redis as unknown as any });
     queues.set(name, queue);
     return queue;
   } catch (err) {
@@ -44,9 +44,9 @@ export function createWorker<T>(queueName: QueueName, processor: (job: { name: s
   if (!redis) return null;
   try {
     const worker = new Worker(queueName, async (job) => processor({ name: job.name, data: job.data as T }), {
-      connection: redis as unknown as ConstructorParameters<typeof Worker>[1],
+      connection: redis as unknown as any,
       concurrency: 5,
-    });
+    } as any);
     worker.on('failed', (job, err) => logger.error({ jobId: job?.id, err: err.message, queue: queueName }, 'Job failed'));
     worker.on('completed', (job) => logger.info({ jobId: job.id, queue: queueName }, 'Job completed'));
     return worker;
@@ -60,7 +60,7 @@ export function getQueueEvents(name: QueueName): QueueEvents | null {
   const redis = getRedis();
   if (!redis) return null;
   try {
-    return new QueueEvents(name, { connection: redis as unknown as ConstructorParameters<typeof QueueEvents>[1] });
+    return new QueueEvents(name, { connection: redis as unknown as any } as any);
   } catch {
     return null;
   }

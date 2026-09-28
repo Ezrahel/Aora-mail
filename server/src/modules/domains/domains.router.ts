@@ -31,21 +31,21 @@ domainsRouter.post('/', async (req: Request, res: Response, next: NextFunction) 
 
 domainsRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const domain = await domainsService.getDomain(req.params.id, req.organizationId!);
+    const domain = await domainsService.getDomain((req.params.id as string), req.organizationId!);
     res.json({ data: domain, meta: {} });
   } catch (err) { next(err); }
 });
 
 domainsRouter.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await domainsService.deleteDomain(req.params.id, req.organizationId!, req.user!.id);
+    await domainsService.deleteDomain((req.params.id as string), req.organizationId!, req.user!.id);
     res.json({ data: { success: true }, message: 'Domain removed.', meta: {} });
   } catch (err) { next(err); }
 });
 
 domainsRouter.post('/:id/verify', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const domain = await domainsService.verifyDomain(req.params.id, req.organizationId!, req.user!.id);
+    const domain = await domainsService.verifyDomain((req.params.id as string), req.organizationId!, req.user!.id);
     const d = domain as { status: string };
     const message = d.status === 'active' ? 'Domain verified and active.' : 'Some DNS records still need attention.';
     res.json({ data: domain, message, meta: {} });
@@ -54,7 +54,7 @@ domainsRouter.post('/:id/verify', async (req: Request, res: Response, next: Next
 
 domainsRouter.get('/:id/dns', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const records = await domainsService.getDnsRecords(req.params.id, req.organizationId!);
+    const records = await domainsService.getDnsRecords((req.params.id as string), req.organizationId!);
     const mapped = (records as Array<{ id: string; domainId: string; type: string; host: string; value: string; priority: number | null; purpose: string | null; status: string }>)
       .map((r) => {
         let status: string = r.status;

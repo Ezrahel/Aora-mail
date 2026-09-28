@@ -8,7 +8,7 @@ dnsRouter.use(authMiddleware, loadUserMiddleware, requireAuth);
 
 dnsRouter.get('/:domainId', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const domain = await prisma.domain.findFirst({ where: { id: req.params.domainId, organizationId: req.organizationId! } });
+    const domain = await prisma.domain.findFirst({ where: { id: (req.params.domainId as string), organizationId: req.organizationId! } });
     if (!domain) throw notFound('Domain not found.');
     const records = await prisma.dnsRecord.findMany({ where: { domainId: domain.id } });
     res.json({ data: records, meta: {} });

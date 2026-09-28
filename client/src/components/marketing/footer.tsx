@@ -65,7 +65,7 @@ export function MarketingFooter() {
         </div>
         <div className="border-t border-black/5 py-4">
           <div className="flex flex-col gap-2 text-xs text-[#86868b] sm:flex-row sm:items-center sm:justify-between">
-            <p>© {new Date().getFullYear()} {SITE.legalName}. All rights reserved.</p>
+            <p suppressHydrationWarning>© {new Date().getFullYear()} {SITE.legalName}. All rights reserved.</p>
             <p className="flex items-center gap-2">
               <span className="size-1.5 rounded-full bg-[#16FF00] shadow-[0_0_8px_rgba(22,255,0,0.5)]" />
               Built for businesses that mean business.

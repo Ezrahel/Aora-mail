@@ -15,6 +15,7 @@ export function createRateLimiter(opts: { windowMs: number; max: number; message
 
 export const loginLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5, message: 'Too many login attempts. Please try again in 15 minutes.' });
 export const registerLimiter = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 5, message: 'Too many accounts created. Please try again later.' });
+export const passwordResetLimiter = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 5, message: 'Too many password reset attempts. Please try again later.' });
 export const generalLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 100 });
 export const domainVerifyLimiter = createRateLimiter({ windowMs: 5 * 60 * 1000, max: 10, message: 'Too many verification attempts. Please wait a few minutes.' });
 export const mailboxCreateLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 10 });

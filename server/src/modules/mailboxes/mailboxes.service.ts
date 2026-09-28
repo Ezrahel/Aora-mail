@@ -7,12 +7,25 @@ import { v4 as uuid } from 'uuid';
 import { enqueue } from '../../lib/queue';
 
 function validateLocalPart(localPart: string): void {
-  if (!/^[a-z0-9._-]+$/i.test(localPart) || localPart.length < 1 || localPart.length > 64) {
-    throw new AppError(422, 'VALIDATION_ERROR', 'Local part contains invalid characters.', { localPart: 'Invalid mailbox name' });
+  const normalized = localPart.trim().toLowerCase();
+  if (normalized.length < 1 || normalized.length > 64) {
+    throw new AppError(422, 'VALIDATION_ERROR', 'Local part must be 1-64 characters.', { localPart: 'Invalid length' });
   }
-  if (localPart.startsWith('.') || localPart.endsWith('.') || localPart.includes('..')) {
-    throw new AppError(422, 'VALIDATION_ERROR', 'Invalid mailbox name.', { localPart: 'Invalid format' });
+  if (!/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/.test(normalized)) {
+    throw new AppError(422, 'VALIDATION_ERROR', 'Use letters, numbers, dots, hyphens, or underscores. Cannot start/end with symbol.', { localPart: 'Invalid mailbox name' });
   }
+  if (normalized.startsWith('-') || normalized.endsWith('-') || normalized.startsWith('.') || normalized.endsWith('.') || normalized.includes('..') || normalized.includes('.-') || normalized.includes('-.') || normalized.includes('--')) {
+    // Allow single hyphen/underscore inside, but not consecutive symbols at start/end
+    if (normalized.startsWith('-') || normalized.endsWith('-') || normalized.startsWith('.') || normalized.endsWith('.')) {
+      throw new AppError(422, 'VALIDATION_ERROR', 'Mailbox cannot start or end with symbol.', { localPart: 'Invalid format' });
+    }
+  }
+}
+
+function validateMailboxPassword(pwd?: string): void {
+  if (!pwd) return;
+  if (pwd.length < 10) throw new AppError(422, 'VALIDATION_ERROR', 'Mailbox password must be at least 10 characters.', { password: 'Too short' });
+  if (pwd.length > 128) throw new AppError(422, 'VALIDATION_ERROR', 'Password too long.', { password: 'Too long' });
 }
 
 export async function listMailboxes(organizationId: string, opts: { page: number; limit: number }): Promise<{ data: unknown[]; total: number }> {
@@ -47,7 +60,9 @@ export async function getConnectionDetails(id: string, organizationId: string): 
 }
 
 export async function createMailbox(organizationId: string, userId: string, input: { localPart: string; domainId: string; password?: string; quotaBytes?: number; idempotencyKey?: string }, requestId?: string): Promise<unknown> {
-  validateLocalPart(input.localPart);
+  const normalizedLocal = input.localPart.trim().toLowerCase();
+  validateLocalPart(normalizedLocal);
+  validateMailboxPassword(input.password);
 
   const domain = await prisma.domain.findFirst({ where: { id: input.domainId, organizationId } });
   if (!domain) throw notFound('Domain not found.');
@@ -55,21 +70,26 @@ export async function createMailbox(organizationId: string, userId: string, inpu
     throw new AppError(400, 'DOMAIN_NOT_VERIFIED', 'Verify your domain before creating a mailbox.', { domainId: 'DNS not verified' });
   }
 
-  const email = `${input.localPart.toLowerCase()}@${domain.name}`;
+  const email = `${normalizedLocal}@${domain.name}`;
   const existing = await prisma.mailbox.findUnique({ where: { email } });
   if (existing) throw new AppError(409, 'CONFLICT', 'This mailbox already exists.', { localPart: 'Address already taken' });
 
-  // Entitlement & limits
+  // Entitlement & limits — active check
   const ent = await getOrganizationEntitlements(organizationId);
   if (!ent) throw new AppError(403, 'ENTITLEMENT_DENIED', 'No active subscription. Please choose a plan.');
   const currentCount = await prisma.mailbox.count({ where: { organizationId } });
   if (currentCount >= ent.maxMailboxes) {
     throw new AppError(403, 'MAILBOX_LIMIT_EXCEEDED', `Your ${ent.maxMailboxes} mailbox limit has been reached. Upgrade to add more.`);
   }
+  // Also check forwarding/aliases entitlement if needed (future)
 
-  // Quota must be calculated from plan, not trusted from browser
+  // Quota must be calculated from plan, not trusted from browser — active check + audit on tamper
   const allowedQuotaBytes = calculateQuotaBytes(ent);
-  // quotaBytes from input is ignored except to cap at plan quota; if no ent, use plan quota
+  if (input.quotaBytes && input.quotaBytes !== allowedQuotaBytes) {
+    const { logger } = await import('../../common/logging/logger');
+    logger.warn({ requestId, organizationId, domainId: domain.id, provided: input.quotaBytes, allowed: allowedQuotaBytes }, 'Quota tamper attempt — ignoring client value');
+    await createAuditLog({ action: 'PROVISIONING_FAILED', organizationId, resourceType: 'Mailbox', resourceId: domain.id, metadata: { reason: 'quota_tamper', provided: input.quotaBytes, allowed: allowedQuotaBytes }, requestId });
+  }
   const quotaBytes = allowedQuotaBytes;
 
   const idempotencyKey = input.idempotencyKey ?? `mailbox:${organizationId}:${email}`;
@@ -88,7 +108,7 @@ export async function createMailbox(organizationId: string, userId: string, inpu
       organizationId,
       domainId: domain.id,
       email,
-      localPart: input.localPart.toLowerCase(),
+      localPart: normalizedLocal,
       quotaBytes: BigInt(quotaBytes),
       allocatedQuotaBytes: BigInt(quotaBytes),
       usedBytes: BigInt(0),
@@ -107,14 +127,14 @@ export async function createMailbox(organizationId: string, userId: string, inpu
       type: 'create_mailbox',
       status: 'queued',
       idempotencyKey,
-      payload: { email, domain: domain.name, localPart: input.localPart },
+      payload: { email, domain: domain.name, localPart: normalizedLocal },
     },
   });
 
-  await enqueue('provisioning', 'create_mailbox', { jobId, mailboxId: mailbox.id, organizationId, domain: domain.name, localPart: input.localPart, password, quotaBytes }).catch(() => {});
+  await enqueue('provisioning', 'create_mailbox', { jobId, mailboxId: mailbox.id, organizationId, domain: domain.name, localPart: normalizedLocal, password, quotaBytes }).catch(() => {});
 
   // Attempt provisioning inline (idempotent)
-  provisionMailbox(mailbox.id, domain.name, input.localPart, password, quotaBytes).catch(() => {});
+  provisionMailbox(mailbox.id, domain.name, normalizedLocal, password, quotaBytes).catch(() => {});
 
   await createAuditLog({ action: 'MAILBOX_CREATED', actorId: userId, organizationId, resourceType: 'Mailbox', resourceId: mailbox.id, metadata: { email }, requestId });
 

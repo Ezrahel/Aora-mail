@@ -14,6 +14,7 @@ export function ProductMockup() {
         initial={{ y: 20, opacity: 0, rotateX: 10 }}
         animate={{ y: 0, opacity: 1, rotateX: 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
+        suppressHydrationWarning
         className="relative overflow-hidden rounded-[32px] border border-white/60 bg-white/80 backdrop-blur-2xl shadow-float"
         style={{ transformStyle: "preserve-3d" }}
       >

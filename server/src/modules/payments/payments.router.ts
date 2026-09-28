@@ -9,7 +9,7 @@ paymentsRouter.use(authMiddleware, loadUserMiddleware);
 
 paymentsRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { page, limit } = paginationSchema.parse(req.query);
+    const { page, limit } = paginationSchema.parse(req.query as any);
     const hasPagination = req.query.page !== undefined || req.query.limit !== undefined;
     if (!hasPagination) {
       const data = await prisma.payment.findMany({ where: { organizationId: req.organizationId! }, orderBy: { createdAt: 'desc' }, take: 20 });
@@ -38,7 +38,7 @@ paymentsRouter.post('/checkout', async (req: Request, res: Response, next: NextF
 
 paymentsRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const payment = await prisma.payment.findFirst({ where: { id: req.params.id, organizationId: req.organizationId! } });
+    const payment = await prisma.payment.findFirst({ where: { id: (req.params.id as string), organizationId: req.organizationId! } });
     if (!payment) {
       res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Payment not found' } });
       return;

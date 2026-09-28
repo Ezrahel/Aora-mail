@@ -23,7 +23,7 @@ forwardersRouter.post('/', async (req: Request, res: Response, next: NextFunctio
 
 forwardersRouter.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await forwardersService.deleteForwarder(req.params.id, req.organizationId!);
+    await forwardersService.deleteForwarder((req.params.id as string), req.organizationId!);
     res.json({ data: { success: true }, meta: {} });
   } catch (err) { next(err); }
 });

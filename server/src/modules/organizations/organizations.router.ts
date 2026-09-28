@@ -14,14 +14,14 @@ organizationsRouter.get('/', async (req: Request, res: Response, next: NextFunct
 
 organizationsRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const org = await orgService.getOrganization(req.params.id, req.user!.id);
+    const org = await orgService.getOrganization((req.params.id as string), req.user!.id);
     res.json({ data: org, meta: {} });
   } catch (err) { next(err); }
 });
 
 organizationsRouter.patch('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const org = await orgService.updateOrganization(req.params.id, req.user!.id, { name: req.body.name as string });
+    const org = await orgService.updateOrganization((req.params.id as string), req.user!.id, { name: req.body.name as string });
     res.json({ data: org, meta: {} });
   } catch (err) { next(err); }
 });
@@ -31,7 +31,7 @@ organizationsRouter.patch('/current/profile', async (req: Request, res: Response
     const { name, businessName } = req.body as { name?: string; businessName?: string };
     const { prisma } = await import('../../lib/prisma');
     if (name) await prisma.user.update({ where: { id: req.user!.id }, data: { name } });
-    let org = null;
+    let org: Awaited<ReturnType<typeof prisma.organization.findUnique>> | null = null;
     if (businessName && req.organizationId) {
       org = await prisma.organization.update({ where: { id: req.organizationId }, data: { name: businessName } });
     }

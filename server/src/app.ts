@@ -7,7 +7,7 @@ import { env } from './config/env';
 import { logger } from './common/logging/logger';
 import { requestIdMiddleware } from './common/middleware/request-id';
 import { errorHandler } from './common/middleware/error-handler';
-import { generalLimiter, loginLimiter, registerLimiter, domainVerifyLimiter, mailboxCreateLimiter, paymentLimiter } from './common/middleware/rate-limit';
+import { generalLimiter, loginLimiter, registerLimiter, passwordResetLimiter, domainVerifyLimiter, mailboxCreateLimiter, paymentLimiter } from './common/middleware/rate-limit';
 import { authMiddleware, loadUserMiddleware } from './common/middleware/auth';
 
 import { authRouter } from './modules/auth/auth.router';
@@ -82,9 +82,11 @@ export function createApp(): express.Express {
   app.use(`${v1Prefix}/auth/register`, registerLimiter);
   app.use(`${apiPrefix}/auth/login`, loginLimiter);
   app.use(`${v1Prefix}/auth/login`, loginLimiter);
-  // Forgotten password & password reset
-  app.use(`${apiPrefix}/auth/forgot-password`, generalLimiter);
-  app.use(`${v1Prefix}/auth/forgot-password`, generalLimiter);
+  // Password reset — strict
+  app.use(`${apiPrefix}/auth/forgot-password`, passwordResetLimiter);
+  app.use(`${v1Prefix}/auth/forgot-password`, passwordResetLimiter);
+  app.use(`${apiPrefix}/auth/reset-password`, passwordResetLimiter);
+  app.use(`${v1Prefix}/auth/reset-password`, passwordResetLimiter);
   // Domain verification
   app.use(`${apiPrefix}/domains`, (req, res, next) => {
     if (req.path.endsWith('/verify') && req.method === 'POST') return domainVerifyLimiter(req, res, next);
@@ -223,7 +225,7 @@ export function createApp(): express.Express {
       const userId = (req as unknown as { user: { id: string } }).user.id;
       const orgId = (req as unknown as { organizationId: string }).organizationId;
       if (name) await prisma.user.update({ where: { id: userId }, data: { name } });
-      let org = null;
+      let org: Awaited<ReturnType<typeof prisma.organization.findUnique>> | null = null;
       if (businessName && orgId) org = await prisma.organization.update({ where: { id: orgId }, data: { name: businessName } });
       const user = await prisma.user.findUnique({ where: { id: userId } });
       const token = (req.cookies as Record<string,string> | undefined)?.['aora_session'] ?? (req.headers.authorization as string | undefined) ?? '';

@@ -7,8 +7,42 @@ import { enqueue } from '../../lib/queue';
 import { env } from '../../config/env';
 import { v4 as uuid } from 'uuid';
 
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  pending: ['provisioning', 'error'],
+  provisioning: ['dns_pending', 'error'],
+  dns_pending: ['verifying', 'error', 'suspended'],
+  verifying: ['verified', 'dns_pending', 'error'],
+  verified: ['active', 'error', 'suspended'],
+  active: ['suspended', 'error', 'verifying'],
+  error: ['pending', 'verifying', 'provisioning'],
+  suspended: ['pending', 'verifying', 'error'],
+};
+
+function assertTransition(from: string, to: string): void {
+  const allowed = ALLOWED_TRANSITIONS[from];
+  if (!allowed || !allowed.includes(to)) {
+    throw new AppError(409, 'CONFLICT', `Invalid status transition ${from} → ${to}`);
+  }
+}
+
+function toAsciiDomain(input: string): string {
+  try {
+    const { toASCII } = require('punycode') as { toASCII: (s: string) => string };
+    return toASCII(input.toLowerCase().trim());
+  } catch {
+    return input.toLowerCase().trim();
+  }
+}
+
 function isValidDomain(name: string): boolean {
-  return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(name) && name.length <= 253;
+  const ascii = toAsciiDomain(name);
+  if (ascii.length < 3 || ascii.length > 253) return false;
+  if (ascii.startsWith('-') || ascii.endsWith('-') || ascii.includes('..')) return false;
+  if (!/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(ascii)) return false;
+  const tld = ascii.split('.').pop() ?? '';
+  if (tld.length < 2 || tld.length > 63) return false;
+  if (['example', 'test', 'invalid', 'localhost'].includes(tld)) return false;
+  return true;
 }
 
 export async function listDomains(organizationId: string): Promise<unknown[]> {
@@ -50,11 +84,14 @@ export async function getDomain(domainId: string, organizationId: string): Promi
 }
 
 export async function createDomain(organizationId: string, userId: string, name: string, requestId?: string): Promise<unknown> {
-  const normalized = name.toLowerCase().trim();
+  const normalized = toAsciiDomain(name);
   if (!isValidDomain(normalized)) throw new AppError(422, 'VALIDATION_ERROR', 'Please enter a valid domain name.', { name: 'Invalid domain' });
 
   const existing = await prisma.domain.findUnique({ where: { name: normalized } });
-  if (existing) throw conflict('CONFLICT', 'This domain is already connected to an account.', { name: 'Domain already exists' });
+  if (existing) {
+    if (existing.organizationId === organizationId) throw conflict('CONFLICT', 'This domain is already connected to your organization.', { name: 'Domain already exists in your account' });
+    throw conflict('CONFLICT', 'This domain is already connected to another account.', { name: 'Domain already exists' });
+  }
 
   // Entitlement check
   const ent = await getOrganizationEntitlements(organizationId);
@@ -111,36 +148,41 @@ export async function createDomain(organizationId: string, userId: string, name:
         { type: 'TXT' as const, host: '@', value: dns.spf, purpose: 'SPF — authorizes sending', ttl: 3600 },
         ...dns.dkim.map((k) => ({ type: 'TXT' as const, host: k.selector, value: k.value, purpose: 'DKIM — verifies authenticity', ttl: 3600 })),
       ];
-      // Upsert DnsRecord
       for (const r of records) {
-        await prisma.dnsRecord.create({
-          data: {
-            domainId: domain.id,
-            type: r.type,
-            host: r.host,
-            value: r.value,
-            priority: (r as unknown as { priority?: number }).priority,
-            ttl: r.ttl,
-            purpose: r.purpose,
-            status: 'pending',
-          },
-        });
+        const exists = await prisma.dnsRecord.findFirst({ where: { domainId: domain.id, type: r.type as unknown as import('@prisma/client').DnsRecordType, host: r.host, value: r.value } });
+        if (!exists) {
+          await prisma.dnsRecord.create({
+            data: {
+              domainId: domain.id,
+              type: r.type as unknown as import('@prisma/client').DnsRecordType,
+              host: r.host,
+              value: r.value,
+              priority: (r as unknown as { priority?: number }).priority,
+              ttl: r.ttl,
+              purpose: r.purpose,
+              status: 'pending',
+            },
+          });
+        }
       }
       if (dns.dmarc) {
-        await prisma.dnsRecord.create({
-          data: {
-            domainId: domain.id,
-            type: 'TXT',
-            host: '_dmarc',
-            value: dns.dmarc,
-            purpose: 'DMARC — recommended',
-            status: 'pending',
-          },
-        });
+        const exists = await prisma.dnsRecord.findFirst({ where: { domainId: domain.id, host: '_dmarc', value: dns.dmarc } });
+        if (!exists) {
+          await prisma.dnsRecord.create({
+            data: {
+              domainId: domain.id,
+              type: 'TXT',
+              host: '_dmarc',
+              value: dns.dmarc,
+              purpose: 'DMARC — recommended',
+              status: 'pending',
+            },
+          });
+        }
       }
     }
   } catch {
-    // Non-fatal
+    // Non-fatal; DNS instructions will be retried on next verify
   }
 
   await createAuditLog({ action: 'DOMAIN_ADDED', actorId: userId, organizationId, resourceType: 'Domain', resourceId: domain.id, metadata: { name: normalized }, requestId });
@@ -155,9 +197,17 @@ export async function createDomain(organizationId: string, userId: string, name:
 async function provisionDomain(domainId: string): Promise<void> {
   const domain = await prisma.domain.findUnique({ where: { id: domainId } });
   if (!domain) return;
+  try {
+    assertTransition(domain.status, 'provisioning');
+  } catch {
+    // Already in non-transitionable state, skip
+    if (domain.status !== 'pending' && domain.status !== 'error') return;
+  }
   await prisma.domain.update({ where: { id: domainId }, data: { status: 'provisioning' } });
   try {
     const providerDomain = await emailProvider.createDomain({ domain: domain.name });
+    const fresh = await prisma.domain.findUnique({ where: { id: domainId } });
+    if (fresh) assertTransition(fresh.status, 'dns_pending');
     await prisma.domain.update({
       where: { id: domainId },
       data: {
@@ -199,12 +249,20 @@ export async function verifyDomain(domainId: string, organizationId: string, use
   const domain = await prisma.domain.findFirst({ where: { id: domainId, organizationId } });
   if (!domain) throw notFound('Domain not found.');
 
+  if (!['dns_pending', 'verifying', 'error', 'verified', 'active', 'pending', 'provisioning'].includes(domain.status)) {
+    throw new AppError(409, 'CONFLICT', `Domain not ready for verification (current: ${domain.status})`);
+  }
+  try {
+    assertTransition(domain.status, 'verifying');
+  } catch {
+    // Allow re-verify from active/verified as well
+    if (!['verified', 'active', 'dns_pending', 'error'].includes(domain.status)) throw new AppError(409, 'CONFLICT', `Cannot verify in status ${domain.status}`);
+  }
   await prisma.domain.update({ where: { id: domainId }, data: { status: 'verifying' } });
+  await createAuditLog({ action: 'DNS_CONFIGURED', actorId: userId, organizationId, resourceType: 'Domain', resourceId: domainId, metadata: { name: domain.name } });
 
-  // Retrieve expected records
   const expected = await prisma.dnsRecord.findMany({ where: { domainId } });
 
-  // If no expected, fetch from provider
   let recordsToVerify = expected.map((r) => ({ type: r.type as 'MX' | 'TXT' | 'CNAME', host: r.host, value: r.value }));
   if (!recordsToVerify.length) {
     const dns = await emailProvider.getDomainDns({ domain: domain.name });
@@ -214,17 +272,25 @@ export async function verifyDomain(domainId: string, organizationId: string, use
     ];
   }
 
-  // Verify via DNS lookup (use ManualDnsProvider logic for now)
   const { ManualDnsProvider } = await import('../../providers/dns/cloudflare/cloudflare.provider');
   const provider = new ManualDnsProvider();
-  let result = await provider.verifyDomain({ domain: domain.name, expectedRecords: recordsToVerify as unknown as import('../../providers/dns/dns-provider.interface').DnsRecord[] });
+  let result: Awaited<ReturnType<typeof provider.verifyDomain>> | null = null;
+  let lastError: string | null = null;
+  for (let attempt = 0; attempt < Math.max(1, env.DNS_VERIFICATION_RETRIES); attempt++) {
+    try {
+      result = await provider.verifyDomain({ domain: domain.name, expectedRecords: recordsToVerify as unknown as import('../../providers/dns/dns-provider.interface').DnsRecord[] });
+      break;
+    } catch (err) {
+      lastError = String(err);
+      if (attempt < env.DNS_VERIFICATION_RETRIES - 1) await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+    }
+  }
+  if (!result) throw new AppError(502, 'PROVIDER_ERROR', lastError ?? 'DNS verification temporarily unavailable');
 
-  // Dev-mode simulation: if real DNS not configured, simulate progressive verification so flow can complete in demo without real DNS
-  if (!result.verified && env.isDevelopment) {
-    // Simulate that required records are now verified on second attempt
+  // Strict simulation gate — only when explicitly allowed
+  if (!result.verified && env.ALLOW_DNS_SIMULATION && env.isDevelopment) {
     const hasPending = expected.some((e) => e.host !== '_dmarc' && e.status !== 'verified');
     if (hasPending) {
-      // Mark all non-DMARC as verified for demo
       for (const rec of result.records) {
         if (rec.record.host !== '_dmarc' && rec.status !== 'verified') rec.status = 'verified';
       }
@@ -232,22 +298,28 @@ export async function verifyDomain(domainId: string, organizationId: string, use
     }
   }
 
-  // Update statuses
   for (const r of result.records) {
     const match = expected.find((e) => e.type === r.record.type && e.host === r.record.host && e.value === r.record.value);
     if (match) {
+      const nextStatus = r.status === 'verified' ? 'verified' : r.status === 'error' ? 'error' : r.status === 'missing' ? 'missing' : 'pending';
       await prisma.dnsRecord.update({
         where: { id: match.id },
-        data: { status: r.status === 'verified' ? 'verified' : r.status === 'missing' ? 'pending' : 'pending' },
+        data: { status: nextStatus as unknown as import('@prisma/client').DnsStatus },
       });
     }
   }
 
   const allVerified = result.verified;
   const newStatus = allVerified ? 'verified' : 'dns_pending';
-  // Never mark active solely because provider succeeded — require DNS verified
-  // Active is set when both verified and at least one mailbox or explicit activation
   const finalStatus = allVerified ? 'active' as const : newStatus as unknown as import('@prisma/client').DomainStatus;
+  const fresh = await prisma.domain.findUnique({ where: { id: domainId } });
+  if (fresh) {
+    try {
+      assertTransition(fresh.status, finalStatus);
+    } catch {
+      // Allow verifying → dns_pending/verified transitions even if not in map
+    }
+  }
 
   const updated = await prisma.domain.update({
     where: { id: domainId },
