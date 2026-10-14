@@ -6,6 +6,7 @@ import { env } from '../../config/env';
 import { AppError, conflict, unauthorized } from '../../common/errors/app-error';
 import type { AuthPayload } from '../../common/middleware/auth';
 import { createAuditLog } from '../audit/audit.service';
+import { sendTransactionalEmail } from './mailer.service';
 
 const BCRYPT_ROUNDS = 10;
 
@@ -106,8 +107,10 @@ export async function login(input: { email: string; password: string }): Promise
   };
 }
 
-export async function verifyEmail(userId: string): Promise<void> {
-  await prisma.user.update({ where: { id: userId }, data: { emailVerified: true, emailVerifyToken: null } });
+export async function verifyEmail(token: string): Promise<void> {
+  const user = await prisma.user.findFirst({ where: { emailVerifyToken: token } });
+  if (!user) throw new AppError(400, 'VALIDATION_ERROR', 'Verification link is invalid or expired.');
+  await prisma.user.update({ where: { id: user.id }, data: { emailVerified: true, emailVerifyToken: null } });
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
@@ -115,7 +118,13 @@ export async function requestPasswordReset(email: string): Promise<void> {
   if (!user) return; // Don't reveal existence
   const token = uuid();
   await prisma.user.update({ where: { id: user.id }, data: { resetToken: token, resetTokenExpiry: new Date(Date.now() + 60 * 60 * 1000) } });
-  // In production, send email via provider
+  await sendTransactionalEmail({ to: user.email, subject: 'Reset your Aora password', text: `Reset your password: ${env.CLIENT_URL}/reset-password?token=${encodeURIComponent(token)}` });
+}
+
+export async function sendVerificationEmail(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user?.emailVerifyToken) return;
+  await sendTransactionalEmail({ to: user.email, subject: 'Verify your Aora email', text: `Verify your email: ${env.CLIENT_URL}/verify-email?token=${encodeURIComponent(user.emailVerifyToken)}` });
 }
 
 export async function resetPassword(token: string, newPassword: string): Promise<void> {

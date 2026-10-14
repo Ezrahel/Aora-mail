@@ -1,6 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { AppError, notFound } from '../../common/errors/app-error';
-import { emailProvider } from '../../providers/email/mxroute/mxroute.provider';
+import { getEmailProvider } from '../../providers/email/provider-registry';
 import { getOrganizationEntitlements, calculateQuotaBytes } from '../plans/plans.service';
 import { createAuditLog } from '../audit/audit.service';
 import { v4 as uuid } from 'uuid';
@@ -127,7 +127,7 @@ export async function createMailbox(organizationId: string, userId: string, inpu
       type: 'create_mailbox',
       status: 'queued',
       idempotencyKey,
-      payload: { email, domain: domain.name, localPart: normalizedLocal },
+      payload: { email, domain: domain.name, localPart: normalizedLocal, password, quotaBytes },
     },
   });
 
@@ -143,6 +143,7 @@ export async function createMailbox(organizationId: string, userId: string, inpu
 }
 
 async function provisionMailbox(mailboxId: string, domain: string, localPart: string, password: string, quotaBytes: number): Promise<void> {
+  const emailProvider = getEmailProvider();
   await prisma.mailbox.update({ where: { id: mailboxId }, data: { status: 'pending' } });
   try {
     const providerMailbox = await emailProvider.createMailbox({ domain, localPart, password, quotaBytes, idempotencyKey: mailboxId });
@@ -171,6 +172,7 @@ function generateSecurePassword(): string {
 }
 
 export async function deleteMailbox(id: string, organizationId: string, userId: string): Promise<void> {
+  const emailProvider = getEmailProvider();
   const mailbox = await prisma.mailbox.findFirst({ where: { id, organizationId } });
   if (!mailbox) throw notFound('Mailbox not found.');
   if (mailbox.providerMailboxId) {
@@ -185,6 +187,7 @@ export async function deleteMailbox(id: string, organizationId: string, userId: 
 }
 
 export async function suspendMailbox(id: string, organizationId: string, userId: string): Promise<unknown> {
+  const emailProvider = getEmailProvider();
   const mailbox = await prisma.mailbox.findFirst({ where: { id, organizationId } });
   if (!mailbox) throw notFound('Mailbox not found.');
   if (mailbox.providerMailboxId) await emailProvider.suspendMailbox({ providerMailboxId: mailbox.providerMailboxId });
@@ -194,6 +197,7 @@ export async function suspendMailbox(id: string, organizationId: string, userId:
 }
 
 export async function unsuspendMailbox(id: string, organizationId: string, userId: string): Promise<unknown> {
+  const emailProvider = getEmailProvider();
   const mailbox = await prisma.mailbox.findFirst({ where: { id, organizationId } });
   if (!mailbox) throw notFound('Mailbox not found.');
   if (mailbox.providerMailboxId) await emailProvider.unsuspendMailbox({ providerMailboxId: mailbox.providerMailboxId });
@@ -203,6 +207,7 @@ export async function unsuspendMailbox(id: string, organizationId: string, userI
 }
 
 export async function resetMailboxPassword(id: string, organizationId: string): Promise<{ temporaryPassword: string }> {
+  const emailProvider = getEmailProvider();
   const mailbox = await prisma.mailbox.findFirst({ where: { id, organizationId } });
   if (!mailbox) throw notFound('Mailbox not found.');
   const temporaryPassword = generateSecurePassword();

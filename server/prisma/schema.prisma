@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "cockroachdb"
   url      = env("DATABASE_URL")
 }
 
@@ -305,9 +305,9 @@ model Payment {
   amount           Int // kobo
   currency         String        @default("NGN")
   status           PaymentStatus @default(pending)
-  provider         String        @default("paystack")
+  provider         String        @default("bachs")
   providerReference String       @unique
-  paystackReference String?      @unique
+  paystackReference String?      @unique // legacy field retained for existing databases
   idempotencyKey   String?       @unique
   verified         Boolean       @default(false)
   metadata         Json?

@@ -80,7 +80,6 @@ export const mockApi = {
     const session: AuthSession = {
       user,
       organization,
-      token: createId("tok"),
     };
 
     mutateStore((s) => {
@@ -118,7 +117,6 @@ export const mockApi = {
     const session: AuthSession = {
       user,
       organization,
-      token: createId("tok"),
     };
     mutateStore((s) => {
       s.session = session;

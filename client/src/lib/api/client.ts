@@ -6,6 +6,7 @@ import type {
   DashboardOverview,
   DnsRecord,
   Domain,
+  Forwarder,
   Invoice,
   LoginInput,
   Mailbox,
@@ -27,6 +28,9 @@ async function http<T>(
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(typeof document !== "undefined" && !["GET", "HEAD"].includes(init?.method ?? "GET")
+        ? { "X-CSRF-Token": document.cookie.split("; ").find((entry) => entry.startsWith("aora_csrf="))?.split("=")[1] ?? "" }
+        : {}),
       ...(init?.headers ?? {}),
     },
     credentials: "include",
@@ -83,10 +87,12 @@ export const api = {
           body: JSON.stringify({ email }),
         }),
 
-  verifyEmail: () =>
+  resetPassword: (token: string, password: string) => http<{ success: true }>("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) }),
+
+  verifyEmail: (token: string) =>
     USE_MOCK_API
       ? mockApi.verifyEmail()
-      : http<{ verified: true }>("/auth/verify-email", { method: "POST" }),
+      : http<{ verified: true }>("/auth/verify-email", { method: "POST", body: JSON.stringify({ token }) }),
 
   getDashboard: () =>
     USE_MOCK_API
@@ -152,18 +158,28 @@ export const api = {
           method: "POST",
         }),
 
+  suspendMailbox: (id: string) => http<Mailbox>(`/mailboxes/${id}/suspend`, { method: "POST" }),
+  unsuspendMailbox: (id: string) => http<Mailbox>(`/mailboxes/${id}/unsuspend`, { method: "POST" }),
+  updateMailboxQuota: (id: string, quotaBytes: number) => http<Mailbox>(`/mailboxes/${id}`, { method: "PATCH", body: JSON.stringify({ quotaBytes }) }),
+
+  listForwarders: (domainId?: string) => http<Forwarder[]>(`/forwarders${domainId ? `?domainId=${encodeURIComponent(domainId)}` : ""}`),
+  createForwarder: (input: { domainId: string; source: string; destination: string }) => http<Forwarder>("/forwarders", { method: "POST", body: JSON.stringify(input) }),
+  deleteForwarder: (id: string) => http<{ success: true }>(`/forwarders/${id}`, { method: "DELETE" }),
+
+  createSupportTicket: (input: { subject: string; message: string }) => http<{ id: string }>("/support", { method: "POST", body: JSON.stringify(input) }),
+
   getSubscription: () =>
     USE_MOCK_API
       ? mockApi.getSubscription()
       : http<Subscription | null>("/subscription"),
 
-  selectPlan: (planId: string) =>
-    USE_MOCK_API
-      ? mockApi.selectPlan(planId)
-      : http<Subscription>("/subscription", {
-          method: "POST",
-          body: JSON.stringify({ planId }),
-        }),
+  createCheckout: (planId: string, currency: "NGN" | "USD") =>
+    http<{ checkoutUrl: string; reference: string; currency: "NGN" | "USD"; amount: string }>("/subscriptions/checkout", {
+      method: "POST",
+      body: JSON.stringify({ planId, currency }),
+    }),
+
+  cancelSubscription: (id: string) => http<Subscription>(`/subscriptions/${id}/cancel`, { method: "POST" }),
 
   listInvoices: () =>
     USE_MOCK_API ? mockApi.listInvoices() : http<Invoice[]>("/billing/invoices"),

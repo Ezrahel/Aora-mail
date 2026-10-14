@@ -3,6 +3,7 @@ import * as mailboxesService from './mailboxes.service';
 import { authMiddleware, loadUserMiddleware, requireAuth } from '../../common/middleware/auth';
 import { paginationSchema } from '../../common/validation/schemas';
 import { z } from 'zod';
+import { notFound } from '../../common/errors/app-error';
 
 export const mailboxesRouter = Router();
 mailboxesRouter.use(authMiddleware, loadUserMiddleware, requireAuth);
@@ -72,9 +73,10 @@ mailboxesRouter.patch('/:id', async (req: Request, res: Response, next: NextFunc
     if (qb) {
       const { prisma } = await import('../../lib/prisma');
       const mailbox = await prisma.mailbox.findFirst({ where: { id: (req.params.id as string), organizationId: req.organizationId! } });
-      if (!mailbox) throw new Error('Mailbox not found');
+      if (!mailbox) throw notFound('Mailbox not found.');
       // Update via provider
-      const { emailProvider } = await import('../../providers/email/mxroute/mxroute.provider');
+      const { getEmailProvider } = await import('../../providers/email/provider-registry');
+      const emailProvider = getEmailProvider();
       if (mailbox.providerMailboxId) await emailProvider.updateMailbox({ providerMailboxId: mailbox.providerMailboxId, quotaBytes: qb });
       await prisma.mailbox.update({ where: { id: (req.params.id as string) }, data: { quotaBytes: BigInt(qb), allocatedQuotaBytes: BigInt(qb) } });
     }

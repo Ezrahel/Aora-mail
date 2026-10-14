@@ -50,12 +50,9 @@ export default function RegisterForm() {
       });
       setSession(res.data);
 
-      const plan = planSlug
-        ? getPlanBySlug(planSlug as "starter" | "business" | "pro")
-        : undefined;
-      if (plan) {
-        await api.selectPlan(plan.id);
-      }
+      // A selected public-plan link is intentionally not activated until the
+      // customer completes a verified checkout during onboarding.
+      void planSlug;
 
       toast.success("Account created");
       router.push("/onboarding");

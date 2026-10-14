@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+:root { --font-geist-sans: Inter, Arial, Helvetica, sans-serif; --font-geist-mono: "SFMono-Regular", Consolas, monospace; }
+
 /* ─────────────────────────────────────────────
    Apple Design Paradigm — Aora
    Liquid Glass · Depth · Motion · Vibrancy

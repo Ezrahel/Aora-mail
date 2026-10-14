@@ -22,4 +22,4 @@ export const API_BASE_URL =
 
 /** When true, the typed API client uses in-browser mock adapters. */
 export const USE_MOCK_API =
-  process.env.NEXT_PUBLIC_USE_MOCK_API !== "false";
+  process.env.NEXT_PUBLIC_USE_MOCK_API === "true";

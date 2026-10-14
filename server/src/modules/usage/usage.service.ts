@@ -1,9 +1,10 @@
 import { prisma } from '../../lib/prisma';
-import { emailProvider } from '../../providers/email/mxroute/mxroute.provider';
+import { getEmailProvider } from '../../providers/email/provider-registry';
 import { logger } from '../../common/logging/logger';
 import { env } from '../../config/env';
 
 export async function syncUsage(organizationId: string): Promise<unknown> {
+  const emailProvider = getEmailProvider();
   // Fetch from provider, normalize, store snapshot — do NOT query provider on every dashboard load
   let usage;
   try {

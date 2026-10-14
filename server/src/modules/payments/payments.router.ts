@@ -26,12 +26,13 @@ paymentsRouter.get('/', async (req: Request, res: Response, next: NextFunction) 
 
 paymentsRouter.post('/checkout', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { planId } = req.body as { planId?: string };
+    const { planId, currency = 'NGN' } = req.body as { planId?: string; currency?: 'NGN' | 'USD' };
     if (!planId) {
       res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'planId is required' } });
       return;
     }
-    const result = await subscriptionsService.initiatePaystackCheckout(req.organizationId!, req.user!.id, planId);
+    if (currency !== 'NGN' && currency !== 'USD') { res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Currency must be NGN or USD.' } }); return; }
+    const result = await subscriptionsService.initiateBachsCheckout(req.organizationId!, req.user!.id, planId, currency);
     res.json({ data: result, meta: {} });
   } catch (err) { next(err); }
 });

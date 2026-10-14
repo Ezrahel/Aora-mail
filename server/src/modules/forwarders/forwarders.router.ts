@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authMiddleware, loadUserMiddleware, requireAuth } from '../../common/middleware/auth';
 import * as forwardersService from './forwarders.service';
+import { z } from 'zod';
 
 export const forwardersRouter = Router();
 forwardersRouter.use(authMiddleware, loadUserMiddleware, requireAuth);
@@ -15,7 +16,7 @@ forwardersRouter.get('/', async (req: Request, res: Response, next: NextFunction
 
 forwardersRouter.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { domainId, source, destination } = req.body as { domainId: string; source: string; destination: string };
+    const { domainId, source, destination } = z.object({ domainId: z.string().min(1), source: z.string().min(1).max(64).regex(/^[a-z0-9._-]+$/i), destination: z.string().email() }).parse(req.body);
     const fwd = await forwardersService.createForwarder(req.organizationId!, { domainId, source, destination });
     res.status(201).json({ data: fwd, meta: {} });
   } catch (err) { next(err); }

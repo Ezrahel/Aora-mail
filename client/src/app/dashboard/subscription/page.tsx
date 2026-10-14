@@ -1,6 +1,7 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,7 +13,6 @@ import { PLANS } from "@/lib/constants/plans";
 import { formatDateLong, formatNaira } from "@/lib/formatting";
 
 export default function SubscriptionPage() {
-  const queryClient = useQueryClient();
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["subscription"],
     queryFn: async () => (await api.getSubscription()).data,
@@ -23,18 +23,16 @@ export default function SubscriptionPage() {
     queryFn: async () => (await api.listPlans()).data,
   });
   const plans = plansQuery.data?.length ? plansQuery.data : PLANS;
+  const [currency, setCurrency] = useState<"NGN" | "USD">("NGN");
 
-  const selectMutation = useMutation({
-    mutationFn: (planId: string) => api.selectPlan(planId),
-    onSuccess: async (res) => {
-      toast.success(res.message ?? "Plan updated");
-      await queryClient.invalidateQueries({ queryKey: ["subscription"] });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      await queryClient.invalidateQueries({ queryKey: ["invoices"] });
+  const checkoutMutation = useMutation({
+    mutationFn: (planId: string) => api.createCheckout(planId, currency),
+    onSuccess: (res) => {
+      window.location.assign(res.data.checkoutUrl);
     },
     onError: (err) => {
       toast.error(
-        err instanceof ApiClientError ? err.message : "Could not update plan.",
+        err instanceof ApiClientError ? err.message : "Could not start checkout.",
       );
     },
   });
@@ -66,7 +64,7 @@ export default function SubscriptionPage() {
           Subscription
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Manage your plan and renewal. Prices shown in Nigerian Naira.
+          Choose NGN or USD at checkout. Your service activates only after Bachs confirms payment.
         </p>
       </div>
 
@@ -100,10 +98,9 @@ export default function SubscriptionPage() {
 
       <section>
         <h2 className="font-semibold text-ink">Upgrade or change plan</h2>
-        <p className="mt-1 text-sm text-muted">
-          Selecting a plan activates it in this demo environment. Production
-          billing will use verified server-side payments.
-        </p>
+        <div className="mt-3 flex gap-2" role="group" aria-label="Payment currency">
+          {(["NGN", "USD"] as const).map((value) => <Button key={value} size="sm" variant={currency === value ? "accent" : "secondary"} onClick={() => setCurrency(value)}>{value}</Button>)}
+        </div>
         <div className="mt-6 grid gap-5 md:grid-cols-3">
           {plans.map((plan) => (
             <div key={plan.id} className="flex flex-col">
@@ -111,11 +108,11 @@ export default function SubscriptionPage() {
               <Button
                 className="mt-3"
                 variant={data?.planId === plan.id ? "secondary" : "accent"}
-                disabled={data?.planId === plan.id || selectMutation.isPending}
-                loading={selectMutation.isPending}
-                onClick={() => selectMutation.mutate(plan.id)}
+                disabled={data?.planId === plan.id || checkoutMutation.isPending}
+                loading={checkoutMutation.isPending}
+                onClick={() => checkoutMutation.mutate(plan.id)}
               >
-                {data?.planId === plan.id ? "Current plan" : `Select ${plan.name}`}
+                {data?.planId === plan.id ? "Current plan" : `Pay in ${currency}`}
               </Button>
             </div>
           ))}

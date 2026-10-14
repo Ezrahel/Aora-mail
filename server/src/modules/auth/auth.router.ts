@@ -27,7 +27,8 @@ authRouter.post('/register', async (req: Request, res: Response, next: NextFunct
       password: parsed.password,
     });
     setSessionCookie(res, result.token);
-    res.status(201).json({ data: { user: result.user, organization: result.organization, token: result.token }, meta: { requestId: req.requestId } });
+    await authService.sendVerificationEmail(result.user.id);
+    res.status(201).json({ data: { user: result.user, organization: result.organization }, meta: { requestId: req.requestId } });
   } catch (err) { next(err); }
 });
 
@@ -36,7 +37,7 @@ authRouter.post('/login', async (req: Request, res: Response, next: NextFunction
     const parsed = loginSchema.parse(req.body);
     const result = await authService.login({ email: parsed.email, password: parsed.password });
     setSessionCookie(res, result.token);
-    res.json({ data: { user: result.user, organization: result.organization, token: result.token }, meta: { requestId: req.requestId } });
+    res.json({ data: { user: result.user, organization: result.organization }, meta: { requestId: req.requestId } });
   } catch (err) { next(err); }
 });
 
@@ -62,7 +63,7 @@ authRouter.get('/session', async (req: Request, res: Response, next: NextFunctio
       res.json({ data: null, meta: {} });
       return;
     }
-    res.json({ data: { user: { id: user.id, name: user.name, email: user.email, emailVerified: user.emailVerified, createdAt: user.createdAt.toISOString() }, organization: { id: org.id, name: org.name, ownerId: org.ownerId }, token }, meta: {} });
+    res.json({ data: { user: { id: user.id, name: user.name, email: user.email, emailVerified: user.emailVerified, createdAt: user.createdAt.toISOString() }, organization: { id: org.id, name: org.name, ownerId: org.ownerId } }, meta: {} });
   } catch (err) { next(err); }
 });
 
@@ -77,12 +78,9 @@ authRouter.post('/forgot-password', async (req: Request, res: Response, next: Ne
 
 authRouter.post('/verify-email', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Requires auth — token identifies user
-    const token = (req.cookies as Record<string, string> | undefined)?.['aora_session'] ?? req.headers.authorization?.replace('Bearer ', '');
-    if (!token) throw new AppError(401, 'UNAUTHORIZED', 'Please sign in to continue.');
-    const jwt = await import('jsonwebtoken');
-    const payload = jwt.default.verify(token, env.JWT_SECRET) as { userId: string };
-    await authService.verifyEmail(payload.userId);
+    const token = String(req.body.token ?? '');
+    if (!token) throw new AppError(422, 'VALIDATION_ERROR', 'Verification token is required.');
+    await authService.verifyEmail(token);
     res.json({ data: { verified: true }, message: 'Email verified successfully.', meta: {} });
   } catch (err) { next(err); }
 });

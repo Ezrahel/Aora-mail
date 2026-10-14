@@ -1,8 +1,8 @@
 import { prisma } from '../../lib/prisma';
 import { AppError, notFound } from '../../common/errors/app-error';
 import { createAuditLog } from '../audit/audit.service';
-import { env } from '../../config/env';
 import { v4 as uuid } from 'uuid';
+import { amountForCurrency, createCheckout, type SupportedCurrency } from '../payments/bachs.service';
 
 export async function getSubscription(organizationId: string): Promise<unknown | null> {
   const sub = await prisma.subscription.findFirst({ where: { organizationId }, include: { plan: true }, orderBy: { createdAt: 'desc' } });
@@ -18,81 +18,44 @@ export async function listInvoices(organizationId: string, opts: { page: number;
   return { data: data.map(toPublicInvoice), total };
 }
 
-export async function selectPlan(organizationId: string, userId: string, planId: string): Promise<unknown> {
+export async function selectPlan(organizationId: string, userId: string, planId: string): Promise<never> {
   const plan = await prisma.plan.findUnique({ where: { id: planId } });
   if (!plan) throw notFound('Plan not found.');
 
-  // Upsert subscription: if existing active, mark as pending change? For MVP, replace/create active for demo
-  const now = new Date();
-  const periodEnd = new Date(now);
-  periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-
-  // If mock / no paystack, activate immediately; otherwise would require payment flow
-  const subscription = await prisma.subscription.create({
-    data: {
-      organizationId,
-      planId: plan.id,
-      status: 'active',
-      currentPeriodStart: now,
-      currentPeriodEnd: periodEnd,
-    },
-    include: { plan: true },
-  });
-
-  // Create paid invoice
-  const invoiceCount = await prisma.invoice.count({ where: { organizationId } });
-  const invoiceNumber = `INV-${now.getFullYear()}-${String(invoiceCount + 1).padStart(4, '0')}`;
-  await prisma.invoice.create({
-    data: {
-      organizationId,
-      subscriptionId: subscription.id,
-      number: invoiceNumber,
-      amount: plan.annualPrice,
-      currency: 'NGN',
-      status: 'paid',
-      description: `${plan.name} plan — annual`,
-      paidAt: now,
-    },
-  });
-
-  await createAuditLog({ action: 'SUBSCRIPTION_CREATED', actorId: userId, organizationId, resourceType: 'Subscription', resourceId: subscription.id, metadata: { planId: plan.id } });
-  await createAuditLog({ action: 'PLAN_CHANGED', actorId: userId, organizationId, metadata: { plan: plan.slug } });
-
-  return toPublicSubscription(subscription as unknown as Parameters<typeof toPublicSubscription>[0]);
+  void organizationId; void userId; void plan;
+  throw new AppError(409, 'PAYMENT_FAILED', 'Use checkout to activate or change a plan.');
 }
 
-export async function initiatePaystackCheckout(organizationId: string, userId: string, planId: string): Promise<{ authorization_url: string; reference: string }> {
+export async function initiateBachsCheckout(organizationId: string, userId: string, planId: string, currency: SupportedCurrency): Promise<{ checkoutUrl: string; reference: string; currency: SupportedCurrency; amount: string }> {
   const plan = await prisma.plan.findUnique({ where: { id: planId } });
   if (!plan) throw notFound('Plan not found.');
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw notFound('User not found.');
 
   const reference = `aora_${organizationId.slice(0,8)}_${Date.now()}_${uuid().slice(0,6)}`;
+  const amount = amountForCurrency(plan.annualPrice, currency);
+  const amountMinor = Math.round(Number(amount) * 100);
 
-  // Create pending payment
+  const result = await createCheckout({ email: user.email, name: user.name, amount, currency, reference,
+    metadata: { organizationId, planId: plan.id, userId }, idempotencyKey: `checkout:${reference}` });
+
+  // Only persist a pending payment after Bachs has accepted the checkout.
+  // This prevents abandoned records when credentials are absent or Bachs is
+  // temporarily unavailable.
   await prisma.payment.create({
     data: {
       organizationId,
-      amount: plan.annualPrice,
-      currency: 'NGN',
+      amount: amountMinor,
+      currency,
       status: 'pending',
-      provider: 'paystack',
+      provider: 'bachs',
       providerReference: reference,
       paystackReference: reference,
       idempotencyKey: reference,
       metadata: { planId: plan.id } as unknown as object,
     },
   });
-
-  const { initializeTransaction } = await import('../payments/paystack.service');
-  const result = await initializeTransaction({
-    email: user.email,
-    amountKobo: plan.annualPrice,
-    reference,
-    metadata: { organizationId, planId: plan.id, userId },
-  });
-
-  return { authorization_url: result.authorization_url, reference };
+  return { checkoutUrl: result.checkoutUrl, reference, currency, amount };
 }
 
 export async function cancelSubscription(organizationId: string, userId: string, immediate = false): Promise<unknown> {
@@ -104,7 +67,7 @@ export async function cancelSubscription(organizationId: string, userId: string,
     return updated;
   }
   // End-of-period cancellation
-  const graceEnd = sub.currentPeriodEnd ?? new Date(Date.now() + env.SUBSCRIPTION_GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+  const graceEnd = sub.currentPeriodEnd ?? new Date(Date.now() + Number(process.env.SUBSCRIPTION_GRACE_PERIOD_DAYS ?? 7) * 24 * 60 * 60 * 1000);
   const updated = await prisma.subscription.update({ where: { id: sub.id }, data: { status: 'cancelled', cancelledAt: new Date(), currentPeriodEnd: graceEnd } });
   await createAuditLog({ action: 'SUBSCRIPTION_CANCELLED', actorId: userId, organizationId, resourceType: 'Subscription', resourceId: sub.id, metadata: { endOfPeriod: graceEnd.toISOString() } });
   return updated;

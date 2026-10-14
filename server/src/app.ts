@@ -1,4 +1,5 @@
 import express from 'express';
+import { z } from 'zod';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -6,6 +7,7 @@ import pinoHttp from 'pino-http';
 import { env } from './config/env';
 import { logger } from './common/logging/logger';
 import { requestIdMiddleware } from './common/middleware/request-id';
+import { csrfProtection } from './common/middleware/csrf';
 import { errorHandler } from './common/middleware/error-handler';
 import { generalLimiter, loginLimiter, registerLimiter, passwordResetLimiter, domainVerifyLimiter, mailboxCreateLimiter, paymentLimiter } from './common/middleware/rate-limit';
 import { authMiddleware, loadUserMiddleware } from './common/middleware/auth';
@@ -28,6 +30,13 @@ import { getRedis } from './lib/redis';
 export function createApp(): express.Express {
   const app = express();
 
+  // Cockroach/Prisma represents 64-bit byte counters as bigint. Express uses
+  // JSON.stringify for every response, which otherwise throws on bigint and
+  // turns an otherwise valid endpoint into an opaque 500 response.
+  app.set('json replacer', (_key: string, value: unknown) =>
+    typeof value === 'bigint' ? value.toString() : value,
+  );
+
   app.use(helmet({
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: false,
@@ -36,7 +45,10 @@ export function createApp(): express.Express {
     origin: env.CORS_ORIGIN.split(',').map((s) => s.trim()),
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Admin-Token'],
+    // The browser sends this custom header for every state-changing request.
+    // It must be listed here or CORS preflight rejects login/registration
+    // before the request ever reaches the auth router.
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Admin-Token', 'X-CSRF-Token'],
   }));
   app.use(cookieParser());
   app.use(requestIdMiddleware);
@@ -51,13 +63,14 @@ export function createApp(): express.Express {
     customProps: (req) => ({ requestId: (req as unknown as { requestId: string }).requestId }),
   }));
 
-  app.use('/api/webhooks/paystack', express.json({
+  app.use(['/api/webhooks/bachs', '/api/v1/webhooks/bachs'], express.json({
     verify: (req: express.Request & { rawBody?: string }, _res, buf) => {
       (req as unknown as { rawBody: string }).rawBody = buf.toString('utf8');
     },
   }));
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
+  app.use(csrfProtection);
 
   app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
   app.get('/health/live', (_req, res) => res.json({ status: 'live' }));
@@ -228,8 +241,7 @@ export function createApp(): express.Express {
       let org: Awaited<ReturnType<typeof prisma.organization.findUnique>> | null = null;
       if (businessName && orgId) org = await prisma.organization.update({ where: { id: orgId }, data: { name: businessName } });
       const user = await prisma.user.findUnique({ where: { id: userId } });
-      const token = (req.cookies as Record<string,string> | undefined)?.['aora_session'] ?? (req.headers.authorization as string | undefined) ?? '';
-      res.json({ data: { user: user ? { id: user.id, name: user.name, email: user.email, emailVerified: user.emailVerified, createdAt: user.createdAt.toISOString() } : null, organization: org, token }, meta: {} });
+      res.json({ data: { user: user ? { id: user.id, name: user.name, email: user.email, emailVerified: user.emailVerified, createdAt: user.createdAt.toISOString() } : null, organization: org }, meta: {} });
     } catch (err) { next(err); }
   });
   mount('/account', accountRouter);
@@ -240,7 +252,10 @@ export function createApp(): express.Express {
   supportRouter.use(authMiddleware, loadUserMiddleware);
   supportRouter.post('/', async (req, res, next) => {
     try {
-      const { subject, message } = req.body as { subject: string; message: string };
+      const { subject, message } = z.object({
+        subject: z.string().trim().min(1).max(200),
+        message: z.string().trim().min(1).max(10_000),
+      }).parse(req.body);
       const ticket = await prisma.supportTicket.create({ data: { userId: (req as unknown as { user: { id: string } }).user.id, organizationId: (req as unknown as { organizationId: string }).organizationId, subject, message } });
       res.status(201).json({ data: ticket, meta: {} });
     } catch (err) { next(err); }

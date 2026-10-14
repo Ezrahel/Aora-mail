@@ -137,6 +137,14 @@ export interface Invoice {
   description: string;
 }
 
+export interface Forwarder {
+  id: string;
+  domainId: string;
+  source: string;
+  destination: string;
+  createdAt: string;
+}
+
 export interface AccountSummary {
   businessName: string;
   subscription: Subscription | null;
@@ -177,7 +185,6 @@ export interface OnboardingState {
 export interface AuthSession {
   user: User;
   organization: Organization;
-  token: string;
 }
 
 export interface RegisterInput {

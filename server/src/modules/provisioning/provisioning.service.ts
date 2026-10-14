@@ -1,8 +1,9 @@
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../common/logging/logger';
-import { emailProvider } from '../../providers/email/mxroute/mxroute.provider';
+import { getEmailProvider } from '../../providers/email/provider-registry';
 
 export async function processProvisioningJob(jobId: string): Promise<void> {
+  const emailProvider = getEmailProvider();
   const job = await prisma.provisioningJob.findUnique({ where: { id: jobId } });
   if (!job) {
     logger.warn({ jobId }, 'Provisioning job not found');
@@ -24,7 +25,9 @@ export async function processProvisioningJob(jobId: string): Promise<void> {
       }
       case 'create_mailbox': {
         const payload = job.payload as { domain: string; localPart: string; password?: string; quotaBytes?: number };
-        // This path is used when enqueued via queue; direct mailbox creation already provisions inline
+        if (!job.mailboxId || !payload.password || !payload.quotaBytes) throw new Error('Incomplete mailbox provisioning job.');
+        const result = await emailProvider.createMailbox({ domain: payload.domain, localPart: payload.localPart, password: payload.password, quotaBytes: payload.quotaBytes, idempotencyKey: job.idempotencyKey });
+        await prisma.mailbox.update({ where: { id: job.mailboxId }, data: { providerMailboxId: result.id, usedBytes: BigInt(result.usedBytes), status: result.status === 'active' ? 'active' : 'pending' } });
         break;
       }
       case 'verify_domain': {

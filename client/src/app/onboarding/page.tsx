@@ -287,9 +287,8 @@ function PlanStep({
   async function choose(planId: string) {
     setPending(planId);
     try {
-      const res = await api.selectPlan(planId);
-      toast.success(res.message ?? "Plan activated");
-      onDone();
+      const res = await api.createCheckout(planId, "NGN");
+      window.location.assign(res.data.checkoutUrl);
     } catch (err) {
       toast.error(
         err instanceof ApiClientError ? err.message : "Could not activate plan.",

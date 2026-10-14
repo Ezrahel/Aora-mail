@@ -1,6 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { AppError, conflict, notFound } from '../../common/errors/app-error';
-import { emailProvider } from '../../providers/email/mxroute/mxroute.provider';
+import { getEmailProvider } from '../../providers/email/provider-registry';
 import { createAuditLog } from '../audit/audit.service';
 import { getOrganizationEntitlements, canCreateDomain } from '../plans/plans.service';
 import { enqueue } from '../../lib/queue';
@@ -84,6 +84,7 @@ export async function getDomain(domainId: string, organizationId: string): Promi
 }
 
 export async function createDomain(organizationId: string, userId: string, name: string, requestId?: string): Promise<unknown> {
+  const emailProvider = getEmailProvider();
   const normalized = toAsciiDomain(name);
   if (!isValidDomain(normalized)) throw new AppError(422, 'VALIDATION_ERROR', 'Please enter a valid domain name.', { name: 'Invalid domain' });
 
@@ -195,6 +196,7 @@ export async function createDomain(organizationId: string, userId: string, name:
 }
 
 async function provisionDomain(domainId: string): Promise<void> {
+  const emailProvider = getEmailProvider();
   const domain = await prisma.domain.findUnique({ where: { id: domainId } });
   if (!domain) return;
   try {
@@ -231,6 +233,7 @@ async function provisionDomain(domainId: string): Promise<void> {
 }
 
 export async function deleteDomain(domainId: string, organizationId: string, userId: string): Promise<void> {
+  const emailProvider = getEmailProvider();
   const domain = await prisma.domain.findFirst({ where: { id: domainId, organizationId } });
   if (!domain) throw notFound('Domain not found.');
   // Prevent deletion if active mailboxes exist unless forced
@@ -246,6 +249,7 @@ export async function deleteDomain(domainId: string, organizationId: string, use
 }
 
 export async function verifyDomain(domainId: string, organizationId: string, userId: string): Promise<unknown> {
+  const emailProvider = getEmailProvider();
   const domain = await prisma.domain.findFirst({ where: { id: domainId, organizationId } });
   if (!domain) throw notFound('Domain not found.');
 

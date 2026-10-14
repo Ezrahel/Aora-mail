@@ -1,12 +1,13 @@
 import { prisma } from '../../lib/prisma';
 import { notFound } from '../../common/errors/app-error';
-import { emailProvider } from '../../providers/email/mxroute/mxroute.provider';
+import { getEmailProvider } from '../../providers/email/provider-registry';
 
 export async function listForwarders(organizationId: string, domainId?: string): Promise<unknown[]> {
   return prisma.forwarder.findMany({ where: { organizationId, ...(domainId ? { domainId } : {}) } });
 }
 
 export async function createForwarder(organizationId: string, input: { domainId: string; source: string; destination: string }): Promise<unknown> {
+  const emailProvider = getEmailProvider();
   const domain = await prisma.domain.findFirst({ where: { id: input.domainId, organizationId } });
   if (!domain) throw notFound('Domain not found.');
   const provider = await emailProvider.createForwarder({ domain: domain.name, source: input.source, destination: input.destination });
@@ -22,6 +23,7 @@ export async function createForwarder(organizationId: string, input: { domainId:
 }
 
 export async function deleteForwarder(id: string, organizationId: string): Promise<void> {
+  const emailProvider = getEmailProvider();
   const fwd = await prisma.forwarder.findFirst({ where: { id, organizationId } });
   if (!fwd) throw notFound('Forwarder not found.');
   if (fwd.providerForwarderId) {

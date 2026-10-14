@@ -101,6 +101,11 @@ export default function MailboxesPage() {
       );
     },
   });
+  const statusMutation = useMutation({
+    mutationFn: ({ id, suspend }: { id: string; suspend: boolean }) => suspend ? api.suspendMailbox(id) : api.unsuspendMailbox(id),
+    onSuccess: async () => { toast.success("Mailbox status updated"); await queryClient.invalidateQueries({ queryKey: ["mailboxes"] }); },
+    onError: () => toast.error("Could not update mailbox status."),
+  });
 
   const isLoading = mailboxesQuery.isLoading;
 
@@ -205,6 +210,9 @@ export default function MailboxesPage() {
                           }}
                         >
                           Delete
+                        </Button>
+                        <Button size="sm" variant="ghost" loading={statusMutation.isPending} onClick={() => statusMutation.mutate({ id: mb.id, suspend: mb.status !== "suspended" })}>
+                          {mb.status === "suspended" ? "Unsuspend" : "Suspend"}
                         </Button>
                       </div>
                     </td>
