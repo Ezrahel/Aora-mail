@@ -3,34 +3,19 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-  CreditCard,
-  Globe2,
-  HelpCircle,
-  LayoutDashboard,
-  LogOut,
-  Mail,
-  ArrowRightLeft,
-  Menu,
-  Settings,
-  X,
-  Receipt,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRightLeft, CreditCard, Globe2, HelpCircle, LayoutDashboard, LogOut, Mail, Menu, Receipt, Settings, X } from "lucide-react";
 import { Logo } from "@/components/marketing/logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth/auth-context";
 import { cn } from "@/lib/formatting";
 
 const NAV = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard, color: "#0A84FF" },
-  { href: "/dashboard/domains", label: "Domains", icon: Globe2, color: "#16FF00" },
-  { href: "/dashboard/mailboxes", label: "Mailboxes", icon: Mail, color: "#BF5AF2" },
-  { href: "/dashboard/forwarding", label: "Aliases", icon: ArrowRightLeft, color: "#0A84FF" },
-  { href: "/dashboard/subscription", label: "Subscription", icon: CreditCard, color: "#FF9F0A" },
-  { href: "/dashboard/billing", label: "Billing", icon: Receipt, color: "#64D2FF" },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings, color: "#6e6e73" },
-  { href: "/dashboard/support", label: "Support", icon: HelpCircle, color: "#FF375F" },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/domains", label: "Domains", icon: Globe2 },
+  { href: "/dashboard/mailboxes", label: "Email accounts", icon: Mail },
+  { href: "/dashboard/forwarding", label: "Aliases & forwarding", icon: ArrowRightLeft },
+  { href: "/dashboard/subscription", label: "Plan & subscription", icon: CreditCard },
+  { href: "/dashboard/billing", label: "Billing", icon: Receipt },
 ];
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -39,129 +24,35 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !session) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-    }
-  }, [loading, session, router, pathname]);
+  useEffect(() => { if (!loading && !session) router.replace(`/login?next=${encodeURIComponent(pathname)}`); }, [loading, session, router, pathname]);
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
+  if (loading || !session) return <div className="grid min-h-screen place-items-center bg-[#f6f7f4]"><div className="size-7 animate-spin rounded-full border-2 border-[#273127] border-r-transparent" /></div>;
 
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
+  const signOut = async () => { await logout(); router.push("/login"); };
+  const navigation = <nav className="space-y-1" aria-label="Dashboard navigation">
+    <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-[#899287]">Workspace</p>
+    {NAV.map(({ href, label, icon: Icon }) => {
+      const active = href === "/dashboard" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+      return <Link key={href} href={href} className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition", active ? "bg-[#e6f6d7] text-[#29451f]" : "text-[#596356] hover:bg-[#f3f5f1] hover:text-[#20281f]")}><Icon className={cn("size-4", active ? "text-[#5d982e]" : "text-[#85907f]")} />{label}</Link>;
+    })}
+  </nav>;
 
-  if (loading || !session) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f5f7]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="size-8 animate-spin rounded-full border-2 border-[#1d1d1f] border-r-transparent" aria-label="Loading" />
-          <p className="text-xs font-medium tracking-widest text-[#86868b]">AORA</p>
+  return <div className="min-h-screen bg-[#f6f7f4] text-[#20241e]">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[252px] border-r border-[#e1e5de] bg-white lg:block">
+      <div className="flex h-full flex-col px-4 py-5">
+        <Link href="/dashboard" className="px-2"><Logo /></Link>
+        <div className="mt-9">{navigation}</div>
+        <div className="mt-auto border-t border-[#e8ebe6] pt-4">
+          <Link href="/dashboard/settings" className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#596356] hover:bg-[#f3f5f1]", pathname.startsWith("/dashboard/settings") && "bg-[#f3f5f1] text-[#20281f]")}><Settings className="size-4" />Settings</Link>
+          <Link href="/dashboard/support" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#596356] hover:bg-[#f3f5f1]"><HelpCircle className="size-4" />Help & support</Link>
+          <div className="mt-5 rounded-xl bg-[#f5f7f2] p-3"><p className="truncate text-xs font-semibold text-[#384136]">{session.organization.name}</p><p className="mt-1 truncate text-xs text-[#7a8476]">{session.user.email}</p><button type="button" onClick={() => void signOut()} className="mt-3 flex items-center gap-2 text-xs font-medium text-[#596356] hover:text-[#20281f]"><LogOut className="size-3.5" />Sign out</button></div>
         </div>
       </div>
-    );
-  }
-
-  async function handleLogout() {
-    await logout();
-    router.push("/login");
-  }
-
-  const nav = (
-    <nav className="flex flex-col gap-1" aria-label="Dashboard">
-      {NAV.map(({ href, label, icon: Icon, color }) => {
-        const active =
-          href === "/dashboard"
-            ? pathname === href
-            : pathname === href || pathname.startsWith(`${href}/`);
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-              active
-                ? "bg-[#1d1d1f] text-white shadow-[0_4px_12px_rgba(0,0,0,0.12)]"
-                : "text-[#6e6e73] hover:bg-white hover:text-[#1d1d1f] hover:shadow-[0_1px_4px_rgba(0,0,0,0.06)]",
-            )}
-          >
-            <span
-              className={cn(
-                "flex size-7 items-center justify-center rounded-full transition",
-                active ? "bg-white/15 text-white" : "bg-white border border-black/5 text-[#86868b] group-hover:border-black/10",
-              )}
-              style={active ? { background: color, color: "#fff" } : undefined}
-            >
-              <Icon className="size-3.5" aria-hidden />
-            </span>
-            {label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-
-  return (
-    <div className="flex min-h-screen bg-[#f5f5f7]">
-      {/* Sidebar — Apple liquid glass */}
-      <aside className="sticky top-0 hidden h-screen w-[260px] shrink-0 flex-col lg:flex">
-        <div className="flex h-full flex-col gap-4 p-4">
-          <div className="glass-strong rounded-[28px] p-4 flex-1 flex flex-col shadow-float border-white/60">
-            <div className="flex items-center gap-2">
-              <Link href="/dashboard" className="flex items-center">
-                <Logo />
-              </Link>
-              <span className="ml-auto flex items-center gap-1 rounded-full bg-[#16FF00]/10 border border-[#16FF00]/20 px-2 py-1 text-[11px] font-semibold text-[#0a6600]">
-                <Sparkles className="size-3" />
-                Business
-              </span>
-            </div>
-            <div className="mt-6 flex-1">{nav}</div>
-            <div className="mt-4 rounded-2xl bg-[#f5f5f7] p-3 border border-black/5">
-              <p className="text-xs font-medium text-[#86868b] truncate">{session.organization.name}</p>
-              <p className="truncate text-sm font-medium text-[#1d1d1f]">{session.user.email}</p>
-              <Button variant="secondary" size="sm" className="mt-3 w-full justify-start gap-2 border-black/5 bg-white" onClick={() => void handleLogout()}>
-                <LogOut className="size-3.5" />
-                Sign out
-              </Button>
-            </div>
-          </div>
-          <div className="rounded-2xl bg-[#1d1d1f] p-4 text-white relative overflow-hidden">
-            <div className="absolute -right-6 -top-6 size-20 rounded-full bg-[#16FF00]/20 blur-xl" />
-            <p className="relative text-sm font-semibold">Need help?</p>
-            <p className="relative mt-1 text-xs text-white/60">Guided DNS setup in under 3 minutes.</p>
-            <Link href="/dashboard/support" className="relative mt-3 inline-flex rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1d1d1f]">
-              Contact support
-            </Link>
-          </div>
-        </div>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-[56px] items-center justify-between gap-3 border-b border-black/5 bg-white/70 backdrop-blur-xl px-4 lg:hidden">
-          <Link href="/dashboard">
-            <Logo />
-          </Link>
-          <button
-            type="button"
-            className="inline-flex size-9 items-center justify-center rounded-full bg-[#1d1d1f] text-white"
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            onClick={() => setMobileOpen((v) => !v)}
-          >
-            {mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}
-          </button>
-        </header>
-        {mobileOpen ? (
-          <div className="border-b border-black/5 bg-white p-4 lg:hidden">
-            <div className="glass rounded-2xl p-3">{nav}</div>
-            <Button variant="ghost" size="sm" className="mt-3 w-full justify-start" onClick={() => void handleLogout()}>
-              <LogOut className="size-4" />
-              Sign out
-            </Button>
-          </div>
-        ) : null}
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 bg-[#f5f5f7] min-h-[calc(100vh-56px)]">
-          <div className="mx-auto max-w-5xl">{children}</div>
-        </main>
-      </div>
+    </aside>
+    <div className="lg:pl-[252px]">
+      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[#e1e5de] bg-white/90 px-5 backdrop-blur lg:px-8"><Link href="/dashboard" className="lg:hidden"><Logo /></Link><div className="hidden lg:block"><p className="text-sm font-semibold">Workspace</p><p className="text-xs text-[#7a8476]">Manage your business email</p></div><div className="flex items-center gap-3"><Link href="/dashboard/support" className="hidden text-sm font-medium text-[#596356] hover:text-[#20281f] sm:block">Need help?</Link><button type="button" className="grid size-9 place-items-center rounded-lg border border-[#dde2d9] lg:hidden" aria-label={mobileOpen ? "Close navigation" : "Open navigation"} onClick={() => setMobileOpen((value) => !value)}>{mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}</button></div></header>
+      {mobileOpen && <div className="border-b border-[#e1e5de] bg-white p-4 lg:hidden">{navigation}<Button variant="ghost" size="sm" className="mt-3" onClick={() => void signOut()}><LogOut className="size-4" />Sign out</Button></div>}
+      <main className="min-h-[calc(100vh-64px)] px-5 py-7 sm:px-8 lg:px-10"><div className="mx-auto max-w-6xl">{children}</div></main>
     </div>
-  );
+  </div>;
 }

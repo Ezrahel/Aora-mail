@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
-:root { --font-geist-sans: Inter, Arial, Helvetica, sans-serif; --font-geist-mono: "SFMono-Regular", Consolas, monospace; }
+:root {
+  /* Uses the platform's San Francisco face on Apple devices without bundling
+     Apple-owned font files; sensible system fallbacks cover every platform. */
+  --font-geist-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Arial, sans-serif;
+  --font-geist-mono: "SFMono-Regular", SFMono-Regular, Consolas, monospace;
+}
 
 /* ─────────────────────────────────────────────
    Apple Design Paradigm — Aora

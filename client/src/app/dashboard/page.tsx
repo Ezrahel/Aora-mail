@@ -2,172 +2,26 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, Check, Circle } from "lucide-react";
+import { ArrowRight, CheckCircle2, Circle, Globe2, MailPlus, TriangleAlert } from "lucide-react";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { DashboardSkeleton } from "@/components/ui/skeleton";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { api } from "@/lib/api/client";
 import { formatBytes, formatDate, formatNaira } from "@/lib/formatting";
 
 export default function DashboardPage() {
-  const { data, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: async () => (await api.getDashboard()).data,
-  });
-
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({ queryKey: ["dashboard"], queryFn: async () => (await api.getDashboard()).data });
   if (isLoading) return <DashboardSkeleton />;
-
-  if (isError || !data) {
-    return (
-      <div className="rounded-md border border-border bg-white p-6">
-        <p className="font-medium text-ink">We couldn&apos;t load your dashboard.</p>
-        <p className="mt-1 text-sm text-muted">Check your connection and try again.</p>
-        <Button className="mt-4" variant="secondary" loading={isFetching} onClick={() => void refetch()}>
-          Retry
-        </Button>
-      </div>
-    );
-  }
-
+  if (isError || !data) return <section className="rounded-2xl border border-[#e0e4dc] bg-white p-7"><h1 className="text-lg font-semibold">We couldn&apos;t load your workspace</h1><p className="mt-2 text-sm text-[#667064]">Check your connection and try again.</p><Button className="mt-5" variant="secondary" loading={isFetching} onClick={() => void refetch()}>Try again</Button></section>;
   const { account, email, setup } = data;
+  const unfinished = setup.items.filter((item) => item.status !== "done");
 
-  return (
-    <div className="mx-auto max-w-5xl space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">Overview</h1>
-          <p className="mt-1 text-sm text-muted">{account.businessName}</p>
-        </div>
-        <Link href="/onboarding" className={buttonClasses("secondary", "sm")}>
-          Continue setup
-        </Link>
-      </div>
-
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat
-          label="Subscription"
-          value={account.subscription?.planName ?? "None"}
-          detail={
-            account.subscription
-              ? `${formatNaira(account.subscription.priceYearlyNgn)}/year`
-              : "Choose a plan"
-          }
-        />
-        <Stat
-          label="Renewal"
-          value={
-            account.subscription
-              ? formatDate(account.subscription.renewalDate)
-              : "—"
-          }
-          detail={account.subscription?.paymentStatus ?? "No active plan"}
-        />
-        <Stat
-          label="Domains"
-          value={String(email.domainCount)}
-          detail={`${email.mailboxCount} mailbox${email.mailboxCount === 1 ? "" : "es"}`}
-        />
-        <Stat
-          label="Storage"
-          value={formatBytes(email.storageUsedBytes)}
-          detail={`of ${formatBytes(email.storageAvailableBytes)}`}
-        />
-      </section>
-
-      <section className="rounded-md border border-border bg-white p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-semibold text-ink">Account status</h2>
-          <StatusBadge
-            label={
-              account.accountStatus === "active"
-                ? "Active"
-                : account.accountStatus === "suspended"
-                  ? "Suspended"
-                  : "Setup required"
-            }
-            tone={
-              account.accountStatus === "active"
-                ? "success"
-                : account.accountStatus === "suspended"
-                  ? "danger"
-                  : "warning"
-            }
-          />
-        </div>
-      </section>
-
-      <section className="rounded-md border border-border bg-white p-5">
-        <h2 className="font-semibold text-ink">Setup status</h2>
-        <ul className="mt-4 space-y-3">
-          {setup.items.map((item) => (
-            <li
-              key={`${item.label}-${item.detail}`}
-              className="flex items-start gap-3 border-b border-border pb-3 last:border-0 last:pb-0"
-            >
-              <SetupIcon status={item.status} />
-              <div>
-                <p className="text-sm font-medium text-ink">{item.label}</p>
-                {item.detail ? (
-                  <p className="text-sm text-muted">{item.detail}</p>
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
-  );
+  return <div className="space-y-7">
+    <section className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-sm text-[#687364]">{account.businessName}</p><h1 className="mt-1 text-3xl font-semibold tracking-[-0.045em] text-[#20241e]">Good to see you.</h1><p className="mt-2 text-sm text-[#687364]">Here&apos;s what needs your attention today.</p></div><Link href="/dashboard/mailboxes" className={buttonClasses("primary", "md", "rounded-lg")}>Create mailbox <MailPlus className="size-4" /></Link></section>
+    {unfinished.length > 0 ? <section className="rounded-2xl border border-[#dbe9cc] bg-[#f3faec] p-5 sm:flex sm:items-center sm:justify-between"><div className="flex gap-3"><div className="grid size-9 shrink-0 place-items-center rounded-full bg-[#d9efc5] text-[#4f7d2d]"><TriangleAlert className="size-4" /></div><div><h2 className="font-semibold text-[#253620]">Finish setting up your email</h2><p className="mt-1 text-sm text-[#617259]">{unfinished.length} item{unfinished.length === 1 ? "" : "s"} still need attention before your workspace is fully ready.</p></div></div><Link href="/onboarding" className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#3f7024] sm:mt-0">Continue setup <ArrowRight className="size-4" /></Link></section> : <section className="rounded-2xl border border-[#dbe9cc] bg-[#f3faec] p-5"><div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-full bg-[#d9efc5] text-[#4f7d2d]"><CheckCircle2 className="size-5" /></span><div><h2 className="font-semibold text-[#253620]">Your workspace is ready</h2><p className="mt-1 text-sm text-[#617259]">Your domain and mailboxes are configured and active.</p></div></div></section>}
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Plan" value={account.subscription?.planName ?? "No active plan"} note={account.subscription ? `${formatNaira(account.subscription.priceYearlyNgn)}/year` : "Choose a plan to activate mail"} /><Metric label="Next renewal" value={account.subscription ? formatDate(account.subscription.renewalDate) : "—"} note={account.subscription?.paymentStatus ?? "No payment scheduled"} /><Metric label="Email accounts" value={String(email.mailboxCount)} note={`${email.domainCount} connected domain${email.domainCount === 1 ? "" : "s"}`} /><Metric label="Storage used" value={formatBytes(email.storageUsedBytes)} note={`of ${formatBytes(email.storageAvailableBytes)}`} /></section>
+    <section className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]"><div className="rounded-2xl border border-[#e0e4dc] bg-white p-6"><div className="flex items-center justify-between"><div><h2 className="font-semibold">Setup checklist</h2><p className="mt-1 text-sm text-[#687364]">A clear view of your email foundation.</p></div><Link href="/onboarding" className="text-sm font-semibold text-[#4e7d2c] hover:underline">View setup</Link></div><ul className="mt-5 divide-y divide-[#edf0eb]">{setup.items.map((item) => <li key={`${item.label}-${item.detail}`} className="flex items-center gap-3 py-3.5 first:pt-0 last:pb-0"><SetupState status={item.status} /><div className="min-w-0 flex-1"><p className="text-sm font-medium text-[#2b3029]">{item.label}</p>{item.detail && <p className="mt-0.5 truncate text-sm text-[#74806f]">{item.detail}</p>}</div>{item.status !== "done" && <ArrowRight className="size-4 text-[#9aa497]" />}</li>)}</ul></div><div className="rounded-2xl bg-[#252b24] p-6 text-white"><Globe2 className="size-5 text-[#b7ef74]" /><h2 className="mt-6 text-xl font-semibold tracking-[-0.03em]">Manage what matters.</h2><p className="mt-2 text-sm leading-6 text-white/60">Add a domain, create an inbox, or update your plan from one clear workspace.</p><div className="mt-7 space-y-2"><Link href="/dashboard/domains" className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2.5 text-sm font-medium hover:bg-white/15">Domains <ArrowRight className="size-4" /></Link><Link href="/dashboard/mailboxes" className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2.5 text-sm font-medium hover:bg-white/15">Email accounts <ArrowRight className="size-4" /></Link></div></div></section>
+  </div>;
 }
 
-function Stat({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <div className="rounded-md border border-border bg-white p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">
-        {label}
-      </p>
-      <p className="mt-2 text-xl font-semibold text-ink">{value}</p>
-      <p className="mt-1 text-sm text-muted">{detail}</p>
-    </div>
-  );
-}
-
-function SetupIcon({ status }: { status: "done" | "pending" | "warning" | "error" }) {
-  if (status === "done") {
-    return (
-      <span className="mt-0.5 flex size-5 items-center justify-center rounded-full bg-[color-mix(in_srgb,#16FF00_25%,white)] text-ink">
-        <Check className="size-3" aria-hidden />
-        <span className="sr-only">Done</span>
-      </span>
-    );
-  }
-  if (status === "warning") {
-    return (
-      <span className="mt-0.5 text-warning">
-        <AlertCircle className="size-5" aria-hidden />
-        <span className="sr-only">Attention needed</span>
-      </span>
-    );
-  }
-  if (status === "error") {
-    return (
-      <span className="mt-0.5 text-danger">
-        <AlertCircle className="size-5" aria-hidden />
-        <span className="sr-only">Error</span>
-      </span>
-    );
-  }
-  return (
-    <span className="mt-0.5 text-muted">
-      <Circle className="size-5" aria-hidden />
-      <span className="sr-only">Pending</span>
-    </span>
-  );
-}
+function Metric({ label, value, note }: { label: string; value: string; note: string }) { return <div className="rounded-2xl border border-[#e0e4dc] bg-white p-5"><p className="text-xs font-semibold uppercase tracking-[0.11em] text-[#7a8476]">{label}</p><p className="mt-3 truncate text-xl font-semibold tracking-[-0.03em] text-[#252a23]">{value}</p><p className="mt-1.5 text-sm text-[#74806f]">{note}</p></div>; }
+function SetupState({ status }: { status: "done" | "pending" | "warning" | "error" }) { if (status === "done") return <CheckCircle2 className="size-5 shrink-0 text-[#5d982e]" />; if (status === "warning" || status === "error") return <TriangleAlert className="size-5 shrink-0 text-[#cf841f]" />; return <Circle className="size-5 shrink-0 text-[#a5aea1]" />; }
