@@ -34,13 +34,13 @@ type Tone = "neutral" | "success" | "warning" | "danger" | "info";
 function toneClasses(tone: Tone): string {
   switch (tone) {
     case "success":
-      return "bg-[color-mix(in_srgb,#16FF00_18%,white)] text-ink border-[color-mix(in_srgb,#16FF00_45%,#e5e7eb)]";
+      return "bg-accent/15 text-accent border-accent/30";
     case "warning":
-      return "bg-amber-50 text-warning border-amber-200";
+      return "bg-amber-500/15 text-amber-300 border-amber-400/30";
     case "danger":
-      return "bg-red-50 text-danger border-red-200";
+      return "bg-red-500/15 text-red-300 border-red-400/30";
     case "info":
-      return "bg-sky-50 text-sky-800 border-sky-200";
+      return "bg-sky-500/15 text-sky-300 border-sky-400/30";
     default:
       return "bg-surface text-muted border-border";
   }

@@ -12,15 +12,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export const buttonVariants: Record<Variant, string> = {
   primary:
-    "bg-[#1d1d1f] text-white hover:bg-black shadow-[0_1px_2px_rgba(0,0,0,0.08),0_8px_16px_rgba(0,0,0,0.12)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.16)] active:scale-[0.98]",
+    "bg-ink text-[#09100b] hover:bg-white shadow-[0_1px_2px_rgba(0,0,0,0.24),0_8px_16px_rgba(0,0,0,0.28)] active:scale-[0.98]",
   secondary:
-    "bg-white text-[#1d1d1f] border border-black/10 hover:bg-[#f5f5f7] hover:border-black/15 shadow-[0_1px_2px_rgba(0,0,0,0.04)]",
-  ghost: "bg-transparent text-[#1d1d1f] hover:bg-black/[0.06] border border-transparent",
+    "bg-surface text-ink border border-border hover:bg-[#1b2820] hover:border-white/20 shadow-[0_1px_2px_rgba(0,0,0,0.18)]",
+  ghost: "bg-transparent text-ink hover:bg-white/[0.07] border border-transparent",
   danger: "bg-[#ff3b30] text-white hover:bg-[#e5342a] shadow-[0_4px_12px_rgba(255,59,48,0.25)]",
   accent:
     "bg-[#16FF00] text-[#0a1f0a] hover:bg-[#14e600] shadow-[0_4px_16px_rgba(22,255,0,0.35),0_1px_2px_rgba(0,0,0,0.06)] active:scale-[0.98] font-semibold",
   glass:
-    "glass text-[#1d1d1f] hover:bg-white/80 border-white/60 shadow-[0_4px_16px_rgba(0,0,0,0.08)] backdrop-blur-xl",
+    "glass text-ink hover:bg-white/10 border-white/15 shadow-[0_4px_16px_rgba(0,0,0,0.2)] backdrop-blur-xl",
 };
 
 export const buttonSizes: Record<Size, string> = {

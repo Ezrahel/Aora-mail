@@ -27,8 +27,8 @@ export function MarketingNav() {
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
           className={`mx-auto flex h-[52px] items-center justify-between rounded-full border px-2 sm:px-3 transition-all duration-300 ${
             scrolled
-              ? "glass-strong border-white/60 shadow-float max-w-[900px]"
-              : "glass border-white/40 max-w-[980px]"
+              ? "glass-strong shadow-float max-w-[900px]"
+              : "glass max-w-[980px]"
           }`}
         >
           <Link href="/" className="flex items-center gap-2 pl-2">
@@ -40,7 +40,7 @@ export function MarketingNav() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="rounded-full px-3.5 py-1.5 text-[13px] font-medium text-[#1d1d1f]/70 transition hover:bg-black/[0.06] hover:text-[#1d1d1f]"
+                className="rounded-full px-3.5 py-1.5 text-[13px] font-medium text-muted transition hover:bg-white/[0.08] hover:text-ink"
               >
                 {link.label}
               </Link>
@@ -50,13 +50,13 @@ export function MarketingNav() {
           <div className="hidden items-center gap-2 md:flex">
             <Link
               href="/login"
-              className="rounded-full px-4 py-2 text-[13px] font-medium text-[#1d1d1f] transition hover:bg-black/[0.06]"
+              className="rounded-full px-4 py-2 text-[13px] font-medium text-ink transition hover:bg-white/[0.08]"
             >
               Sign in
             </Link>
             <Link
               href="/register"
-              className="group relative inline-flex h-9 items-center justify-center rounded-full bg-[#1d1d1f] px-5 text-[13px] font-medium text-white transition hover:bg-black"
+              className="group relative inline-flex h-9 items-center justify-center rounded-full bg-accent px-5 text-[13px] font-semibold text-[#0a1f0a] transition hover:bg-[#5bff4a]"
             >
               <span className="absolute inset-0 rounded-full bg-gradient-to-b from-white/15 to-transparent opacity-60" />
               <span className="relative">Get started</span>
@@ -66,7 +66,7 @@ export function MarketingNav() {
 
           <button
             type="button"
-            className="inline-flex size-9 items-center justify-center rounded-full bg-[#1d1d1f] text-white md:hidden"
+            className="inline-flex size-9 items-center justify-center rounded-full bg-accent text-[#0a1f0a] md:hidden"
             aria-expanded={open}
             aria-label={open ? "Close menu" : "Open menu"}
             onClick={() => setOpen((v) => !v)}
@@ -89,24 +89,24 @@ export function MarketingNav() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="rounded-2xl px-3 py-2.5 text-sm font-medium text-[#1d1d1f] hover:bg-black/[0.06]"
+                    className="rounded-2xl px-3 py-2.5 text-sm font-medium text-ink hover:bg-white/[0.08]"
                     onClick={() => setOpen(false)}
                   >
                     {link.label}
                   </Link>
                 ))}
-                <div className="mt-1 flex flex-col gap-2 border-t border-black/10 pt-3">
+                <div className="mt-1 flex flex-col gap-2 border-t border-border pt-3">
                   <Link
                     href="/login"
                     onClick={() => setOpen(false)}
-                    className="rounded-full bg-white border border-black/10 py-2.5 text-center text-sm font-medium"
+                    className="rounded-full bg-surface border border-border py-2.5 text-center text-sm font-medium text-ink"
                   >
                     Sign in
                   </Link>
                   <Link
                     href="/register"
                     onClick={() => setOpen(false)}
-                    className="rounded-full bg-[#1d1d1f] py-2.5 text-center text-sm font-medium text-white"
+                    className="rounded-full bg-accent py-2.5 text-center text-sm font-semibold text-[#0a1f0a]"
                   >
                     Get started
                   </Link>

@@ -12,16 +12,16 @@ export function Select({ className, label, error, options, id, ...props }: Selec
   return (
     <div className="flex flex-col gap-1.5">
       {label ? (
-        <label htmlFor={selectId} className="text-[13px] font-medium text-[#1d1d1f]">
+        <label htmlFor={selectId} className="text-[13px] font-medium text-ink">
           {label}
         </label>
       ) : null}
       <select
         id={selectId}
         className={cn(
-          "h-11 w-full rounded-2xl border border-black/10 bg-white px-3.5 text-sm text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.04)]",
+          "h-11 w-full rounded-2xl border border-border bg-surface px-3.5 text-sm text-ink shadow-[0_1px_2px_rgba(0,0,0,0.2)]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A84FF]/30 focus-visible:border-[#0A84FF]/30",
-          error && "border-[#ff3b30] bg-[#fff5f5]",
+          error && "border-[#ff3b30] bg-[#2d1517]",
           className,
         )}
         aria-invalid={Boolean(error)}

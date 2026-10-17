@@ -36,7 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className="h-full antialiased"
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-white text-ink" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col bg-background text-ink" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -1,9 +1,9 @@
 export const SITE = {
   name: "Aora",
   legalName: "Aora Mail",
-  tagline: "Professional email for businesses that mean business.",
+  tagline: "Business email, made clear.",
   description:
-    "Get reliable business email at your own domain — without paying for an entire office suite.",
+    "Professional business email on your own domain, with clear setup and control for your team.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://aora.ng",
   supportEmail: "support@aora.ng",
   locale: "en-NG",

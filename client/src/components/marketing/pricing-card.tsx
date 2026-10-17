@@ -27,11 +27,11 @@ export function PricingCard({
         whileHover={{ y: -6 }}
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
         className={cn(
-          "relative flex flex-col overflow-visible rounded-[32px] border bg-white p-7 pt-10",
+          "relative flex flex-col overflow-visible rounded-[32px] border border-border bg-surface p-7 pt-10 shadow-soft",
           isBusiness
             ? "border-[#16FF00]/30 shadow-[0_12px_40px_rgba(22,255,0,0.12),0_4px_12px_rgba(0,0,0,0.06)]"
-            : "border-black/5 shadow-[0_4px_16px_rgba(0,0,0,0.06)]",
-          isPro && "bg-gradient-to-b from-[#1d1d1f] to-[#0a0a0f] border-white/10 text-white",
+            : "border-border",
+          isPro && "bg-gradient-to-b from-[#1a241d] to-[#090e0b] border-white/10 text-white",
         )}
       >
         {/* Accent glow — keep inside rounded bounds */}
@@ -50,23 +50,23 @@ export function PricingCard({
           <span
             className={cn(
               "flex size-8 items-center justify-center rounded-2xl",
-              plan.slug === "starter" && "bg-[#f5f5f7] text-[#1d1d1f]",
+              plan.slug === "starter" && "bg-white/[0.06] text-ink border border-border",
               isBusiness && "bg-[#16FF00] text-[#0a1f0a] shadow-[0_4px_12px_rgba(22,255,0,0.3)]",
               isPro && "bg-white/10 text-white border border-white/20",
             )}
           >
             {isPro ? <Sparkles className="size-4" /> : isBusiness ? <Zap className="size-4" /> : <span className="size-2 rounded-full bg-[#16FF00]" />}
           </span>
-          <h3 className={cn("text-[17px] font-semibold", isPro ? "text-white" : "text-[#1d1d1f]")}>{plan.name}</h3>
+          <h3 className={cn("text-[17px] font-semibold", isPro ? "text-white" : "text-ink")}>{plan.name}</h3>
         </div>
 
         <p className="mt-4 flex items-baseline gap-1.5">
-          <span className={cn("text-[32px] font-semibold tracking-tight", isPro ? "text-white" : "text-[#1d1d1f]")}>
+          <span className={cn("text-[32px] font-semibold tracking-tight", isPro ? "text-white" : "text-ink")}>
             {formatNaira(plan.priceYearlyNgn)}
           </span>
-          <span className={cn("text-sm", isPro ? "text-white/60" : "text-[#86868b]")}>/year</span>
+          <span className={cn("text-sm", isPro ? "text-white/60" : "text-muted")}>/year</span>
         </p>
-        <p className={cn("text-xs", isPro ? "text-white/50" : "text-[#86868b]")}>
+        <p className={cn("text-xs", isPro ? "text-white/50" : "text-muted")}>
           {plan.slug === "starter" ? "1 mailbox · 5GB" : plan.slug === "business" ? "5 mailboxes · 10GB each" : "10 mailboxes · 15GB each"}
         </p>
 
@@ -76,12 +76,12 @@ export function PricingCard({
               <span
                 className={cn(
                   "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full",
-                  isPro ? "bg-white/10 border border-white/15" : "bg-[#f5f5f7] border border-black/5",
+                  isPro ? "bg-white/10 border border-white/15" : "bg-white/[0.06] border border-border",
                 )}
               >
-                <Check className={cn("size-3", isPro ? "text-white" : "text-[#1d1d1f]")} strokeWidth={2.5} />
+                <Check className={cn("size-3", isPro ? "text-white" : "text-accent")} strokeWidth={2.5} />
               </span>
-              <span className={cn("text-sm leading-relaxed", isPro ? "text-white/80" : "text-[#1d1d1f]")}>{feature}</span>
+              <span className={cn("text-sm leading-relaxed", isPro ? "text-white/80" : "text-ink")}>{feature}</span>
             </li>
           ))}
         </ul>
@@ -91,7 +91,7 @@ export function PricingCard({
             href={`${ctaHref}?plan=${plan.slug}`}
             className={cn(
               "mt-8 flex w-full",
-              buttonClasses(isBusiness ? "accent" : isPro ? "primary" : "secondary", "md", isPro ? "bg-white text-[#1d1d1f] hover:bg-white/90 w-full" : "w-full"),
+              buttonClasses(isBusiness ? "accent" : isPro ? "primary" : "secondary", "md", isPro ? "bg-white text-[#09100b] hover:bg-white/90 w-full" : "w-full"),
             )}
           >
             Choose {plan.name}
