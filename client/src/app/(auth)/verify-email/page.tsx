@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { toast } from "sonner";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
@@ -10,6 +10,14 @@ import { ApiClientError } from "@/lib/api/errors";
 import { useAuth } from "@/lib/auth/auth-context";
 
 export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+      <VerifyEmailContent />
+    </Suspense>
+  );
+}
+
+function VerifyEmailContent() {
   const { session, refresh } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();

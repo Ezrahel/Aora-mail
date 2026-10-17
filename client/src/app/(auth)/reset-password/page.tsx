@@ -1,13 +1,21 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api/client";
 import { toast } from "sonner";
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+      <ResetPasswordForm />
+    </Suspense>
+  );
+}
+
+function ResetPasswordForm() {
   const params = useSearchParams(); const router = useRouter();
   const [password, setPassword] = useState(""); const [loading, setLoading] = useState(false);
   async function reset(): Promise<void> {
