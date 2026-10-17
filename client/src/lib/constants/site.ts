@@ -18,7 +18,7 @@ export const NAV_LINKS = [
 ] as const;
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+  process.env.NEXT_PUBLIC_API_URL || "/api";
 
 /** When true, the typed API client uses in-browser mock adapters. */
 export const USE_MOCK_API =
