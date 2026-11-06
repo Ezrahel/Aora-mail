@@ -28,7 +28,7 @@ export default function BillingPage() {
       {isLoading ? (
         <Skeleton className="h-48" />
       ) : isError ? (
-        <div className="rounded-md border border-border bg-white p-6">
+        <div className="rounded-md border border-border bg-surface p-6">
           <p className="font-medium text-ink">Could not load invoices.</p>
           <Button
             className="mt-3"
@@ -50,7 +50,7 @@ export default function BillingPage() {
           }}
         />
       ) : (
-        <div className="overflow-hidden rounded-md border border-border bg-white">
+        <div className="overflow-hidden rounded-md border border-border bg-surface">
           <table className="hidden w-full text-left text-sm md:table">
             <thead>
               <tr className="border-b border-border text-xs text-muted">

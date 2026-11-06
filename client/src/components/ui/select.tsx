@@ -20,8 +20,8 @@ export function Select({ className, label, error, options, id, ...props }: Selec
         id={selectId}
         className={cn(
           "h-11 w-full rounded-2xl border border-border bg-surface px-3.5 text-sm text-ink shadow-[0_1px_2px_rgba(0,0,0,0.2)]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A84FF]/30 focus-visible:border-[#0A84FF]/30",
-          error && "border-[#ff3b30] bg-[#2d1517]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:border-accent/50",
+          error && "border-danger bg-danger/10",
           className,
         )}
         aria-invalid={Boolean(error)}
@@ -34,7 +34,7 @@ export function Select({ className, label, error, options, id, ...props }: Selec
         ))}
       </select>
       {error ? (
-        <p className="text-xs text-[#ff3b30]" role="alert">
+        <p className="text-xs text-danger" role="alert">
           {error}
         </p>
       ) : null}

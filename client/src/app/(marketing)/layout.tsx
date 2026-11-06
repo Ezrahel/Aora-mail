@@ -1,5 +1,7 @@
-import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
+import { MarketingNav } from "@/components/marketing/nav";
+import { SmoothScroll } from "@/components/scene/smooth-scroll";
+import { SpiralBackdrop } from "@/components/scene/spiral-backdrop";
 
 export default function MarketingLayout({
   children,
@@ -8,8 +10,10 @@ export default function MarketingLayout({
 }) {
   return (
     <div className="flex min-h-full flex-col">
+      <SmoothScroll />
+      <SpiralBackdrop />
       <MarketingNav />
-      <main className="flex-1">{children}</main>
+      <main className="relative z-10 flex-1">{children}</main>
       <MarketingFooter />
     </div>
   );

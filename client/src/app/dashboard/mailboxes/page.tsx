@@ -142,7 +142,7 @@ export default function MailboxesPage() {
           <Skeleton className="h-24" />
         </div>
       ) : mailboxesQuery.isError ? (
-        <div className="rounded-md border border-border bg-white p-6">
+        <div className="rounded-md border border-border bg-surface p-6">
           <p className="font-medium text-ink">Could not load mailboxes.</p>
           <Button
             className="mt-3"
@@ -170,7 +170,7 @@ export default function MailboxesPage() {
           }}
         />
       ) : (
-        <div className="overflow-hidden rounded-md border border-border bg-white">
+        <div className="overflow-hidden rounded-md border border-border bg-surface">
           <div className="hidden md:block">
             <table className="w-full text-left text-sm">
               <thead>

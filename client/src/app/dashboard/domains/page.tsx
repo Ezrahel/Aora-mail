@@ -100,7 +100,7 @@ export default function DomainsPage() {
           <Skeleton className="h-20" />
         </div>
       ) : isError ? (
-        <div className="rounded-md border border-border bg-white p-6">
+        <div className="rounded-md border border-border bg-surface p-6">
           <p className="font-medium text-ink">Could not load domains.</p>
           <Button className="mt-3" variant="secondary" loading={isFetching} onClick={() => void refetch()}>
             Retry
@@ -115,7 +115,7 @@ export default function DomainsPage() {
           onAction={() => setAddOpen(true)}
         />
       ) : (
-        <div className="overflow-hidden rounded-md border border-border bg-white">
+        <div className="overflow-hidden rounded-md border border-border bg-surface">
           <ul className="divide-y divide-border">
             {data.map((domain) => (
               <li

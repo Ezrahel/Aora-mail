@@ -48,7 +48,7 @@ export default function SubscriptionPage() {
 
   if (isError) {
     return (
-      <div className="mx-auto max-w-5xl rounded-md border border-border bg-white p-6">
+      <div className="mx-auto max-w-5xl rounded-md border border-border bg-surface p-6">
         <p className="font-medium text-ink">Could not load subscription.</p>
         <Button className="mt-3" variant="secondary" onClick={() => void refetch()}>
           Retry
@@ -69,7 +69,7 @@ export default function SubscriptionPage() {
       </div>
 
       {data ? (
-        <section className="rounded-md border border-border bg-white p-5">
+        <section className="rounded-md border border-border bg-surface p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted">
@@ -88,7 +88,7 @@ export default function SubscriptionPage() {
           </div>
         </section>
       ) : (
-        <section className="rounded-md border border-dashed border-border bg-white p-5">
+        <section className="rounded-md border border-dashed border-border bg-surface p-5">
           <p className="font-medium text-ink">No active subscription</p>
           <p className="mt-1 text-sm text-muted">
             Choose a plan below to activate business email for your account.

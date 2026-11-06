@@ -1,71 +1,27 @@
+import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Journey } from "@/components/landing/journey";
 import { buttonClasses } from "@/components/ui/button";
-import { Clock, Globe2, Mail, ShieldCheck, ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "How it works",
   description: "Choose a plan, connect your domain, create mailboxes, and start sending business email.",
 };
 
-const STEPS = [
-  {
-    title: "Choose your plan",
-    body: "Select Starter, Business, or Pro based on how many mailboxes you need. You can upgrade later as your team grows. All plans include DNS guidance.",
-    icon: ShieldCheck,
-    color: "#16FF00",
-  },
-  {
-    title: "Connect your domain",
-    body: "Add a domain you already own. We show exactly which DNS records to create — with copy buttons, plain-language explanations, and verification.",
-    icon: Globe2,
-    color: "#0A84FF",
-  },
-  {
-    title: "Create your mailboxes",
-    body: "Pick an address prefix, set a password, choose storage, and provision. Connect any standard email client — Outlook, Apple Mail, mobile.",
-    icon: Mail,
-    color: "#BF5AF2",
-  },
-  {
-    title: "Start sending and receiving",
-    body: "Once DNS verifies, your business email is live. Monitor usage, manage addresses, and handle billing from the dashboard.",
-    icon: Clock,
-    color: "#FF9F0A",
-  },
-];
-
 export default function HowItWorksPage() {
   return (
-    <div className="relative overflow-hidden">
-      <div className="absolute inset-0 mesh-bg-dark -z-10" />
-      <div className="mx-auto max-w-[1160px] px-4 sm:px-6 py-12 sm:py-16">
-        <div className="mx-auto max-w-2xl text-center">
-          <div className="inline-flex rounded-full glass px-3 py-1 text-xs font-semibold text-ink">How it works</div>
-          <h1 className="mt-4 text-title text-ink">Four steps from signup to a working inbox.</h1>
-          <p className="mt-3 text-[15px] text-muted">Designed for busy founders — not IT teams. Each step is guided and clear.</p>
-        </div>
-
-        <div className="mx-auto mt-12 grid max-w-4xl gap-4 sm:grid-cols-2">
-          {STEPS.map((step, i) => (
-            <div key={step.title} className="group relative overflow-hidden rounded-[28px] border border-border bg-surface p-7 shadow-soft transition hover:-translate-y-1 hover:border-white/20 hover:shadow-float">
-              <div className="absolute -right-10 -top-10 size-24 rounded-full blur-2xl opacity-20" style={{ background: step.color }} />
-              <span className="inline-flex size-9 items-center justify-center rounded-2xl border border-border bg-white/[0.05] text-ink">
-                <step.icon className="size-4" style={{ color: step.color }} />
-              </span>
-              <p className="mt-4 font-mono text-xs text-muted">0{i + 1}</p>
-              <h2 className="mt-1 text-[17px] font-semibold text-ink">{step.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{step.body}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-12 flex justify-center">
-          <Link href="/register" className={buttonClasses("accent", "xl")}>
-            Get started — free <ArrowRight className="size-4" />
-          </Link>
-        </div>
-      </div>
-    </div>
+    <>
+      <section data-scene={1} className="flex min-h-[100svh] flex-col items-center justify-center px-6 text-center">
+        <p className="eyebrow rise">How it works</p>
+        <h1 className="text-display rise mt-6 max-w-[46rem] text-ink" style={{ "--i": 1 } as React.CSSProperties}>Four steps from signup to a working inbox.</h1>
+        <p className="rise mt-6 max-w-[28rem] text-[17px] leading-7 text-ink-soft" style={{ "--i": 2 } as React.CSSProperties}>Designed for busy founders, not IT teams. Scroll to walk through it.</p>
+      </section>
+      <Journey />
+      <section data-scene={1} className="flex min-h-[70svh] flex-col items-center justify-center px-6 text-center">
+        <h2 className="text-title max-w-[32rem] text-ink">That&apos;s the whole thing.</h2>
+        <Link href="/register" className={buttonClasses("accent", "xl", "mt-8")}>Get started <ArrowRight className="size-4" /></Link>
+      </section>
+    </>
   );
 }

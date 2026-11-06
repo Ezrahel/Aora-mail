@@ -64,7 +64,7 @@ export default function SettingsPage() {
         <p className="mt-1 text-sm text-muted">Manage your account profile.</p>
       </div>
 
-      <section className="rounded-md border border-border bg-white p-5">
+      <section className="rounded-md border border-border bg-surface p-5">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-ink">Email</p>
@@ -83,7 +83,7 @@ export default function SettingsPage() {
       </section>
 
       <form
-        className="space-y-4 rounded-md border border-border bg-white p-5"
+        className="space-y-4 rounded-md border border-border bg-surface p-5"
         onSubmit={handleSubmit((values) => mutation.mutate(values))}
         noValidate
       >

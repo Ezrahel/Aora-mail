@@ -55,7 +55,7 @@ export default function MailboxDetailPage() {
 
   if (mailboxQuery.isError || !mailboxQuery.data) {
     return (
-      <div className="mx-auto max-w-3xl rounded-md border border-border bg-white p-6">
+      <div className="mx-auto max-w-3xl rounded-md border border-border bg-surface p-6">
         <p className="font-medium text-ink">Mailbox not found.</p>
         <Link href="/dashboard/mailboxes" className={buttonClasses("secondary", "md", "mt-3")}>
           Back to mailboxes
@@ -95,7 +95,7 @@ export default function MailboxDetailPage() {
         </Button>
       </div>
 
-      <section className="rounded-md border border-border bg-white p-5">
+      <section className="rounded-md border border-border bg-surface p-5">
         <h2 className="font-semibold text-ink">Storage usage</h2>
         <p className="mt-2 text-sm text-muted">
           {formatBytes(mb.usedBytes)} of {formatBytes(mb.quotaBytes)} used · Created{" "}
@@ -117,7 +117,7 @@ export default function MailboxDetailPage() {
         </div>
       </section>
 
-      <section className="rounded-md border border-border bg-white p-5">
+      <section className="rounded-md border border-border bg-surface p-5">
         <h2 className="font-semibold text-ink">Connection details</h2>
         <p className="mt-2 text-sm text-muted">
           Use these settings to connect your mailbox to Outlook, Apple Mail,
@@ -141,7 +141,7 @@ export default function MailboxDetailPage() {
         )}
       </section>
 
-      <section className="rounded-md border border-border bg-white p-5">
+      <section className="rounded-md border border-border bg-surface p-5">
         <h2 className="font-semibold text-ink">Security</h2>
         <p className="mt-2 text-sm text-muted">
           Never share mailbox passwords in chat or email. Use a password manager,

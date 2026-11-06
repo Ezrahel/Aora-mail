@@ -25,7 +25,7 @@ export default function SupportPage() {
           We help Nigerian businesses get email working — domains, DNS, and clients.
         </p>
       </div>
-      <section className="rounded-md border border-border bg-white p-5">
+      <section className="rounded-md border border-border bg-surface p-5">
         <p className="text-sm font-medium text-ink">Email support</p>
         <a
           href={`mailto:${SITE.supportEmail}`}
@@ -38,7 +38,7 @@ export default function SupportPage() {
           Do not send passwords or provider credentials.
         </p>
       </section>
-      <section className="rounded-md border border-border bg-white p-5">
+      <section className="rounded-md border border-border bg-surface p-5">
         <h2 className="font-medium text-ink">Open a support request</h2>
         <p className="mt-1 text-sm text-muted">Do not include passwords or payment details.</p>
         <div className="mt-4 space-y-3">
@@ -47,7 +47,7 @@ export default function SupportPage() {
           <Button loading={sending} onClick={() => void submit()}>Send request</Button>
         </div>
       </section>
-      <section className="rounded-md border border-border bg-white p-5">
+      <section className="rounded-md border border-border bg-surface p-5">
         <p className="text-sm font-medium text-ink">Common topics</p>
         <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted">
           <li>DNS records not verifying</li>

@@ -19,10 +19,10 @@ export function Input({ className, label, error, hint, id, ...props }: InputProp
       <input
         id={inputId}
         className={cn(
-          "h-11 w-full rounded-2xl border border-border bg-surface px-3.5 text-sm text-ink shadow-[0_1px_2px_rgba(0,0,0,0.2)]",
+          "h-11 w-full rounded-md border border-border bg-surface-2 px-3.5 text-sm text-ink transition-colors hover:border-border-strong",
           "placeholder:text-muted",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A84FF]/30 focus-visible:border-[#0A84FF]/30 focus-visible:shadow-[0_0_0_4px_rgba(10,132,255,0.1)]",
-          error && "border-[#ff3b30] bg-[#2d1517] focus-visible:ring-[#ff3b30]/20 focus-visible:border-[#ff3b30]",
+          "focus-visible:outline-none focus-visible:border-accent/60 focus-visible:ring-1 focus-visible:ring-accent/40",
+          error && "border-danger bg-danger/10 focus-visible:ring-danger/30 focus-visible:border-danger",
           className,
         )}
         aria-invalid={Boolean(error)}
@@ -30,7 +30,7 @@ export function Input({ className, label, error, hint, id, ...props }: InputProp
         {...props}
       />
       {error ? (
-        <p id={`${inputId}-error`} className="text-xs text-[#ff3b30]" role="alert">
+        <p id={`${inputId}-error`} className="text-xs text-danger" role="alert">
           {error}
         </p>
       ) : hint ? (

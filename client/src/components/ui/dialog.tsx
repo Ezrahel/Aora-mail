@@ -46,7 +46,7 @@ export function Dialog({ open, onClose, title, description, children, className 
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         className={cn(
-          "relative z-10 w-full max-w-lg rounded-[28px] border border-border bg-surface/95 p-6 shadow-float backdrop-blur-2xl max-h-[90vh] overflow-y-auto focus:outline-none",
+          "relative z-10 w-full max-w-lg rounded-xl border border-border bg-surface/95 p-6 shadow-float backdrop-blur-2xl max-h-[90vh] overflow-y-auto focus:outline-none",
           className,
         )}
       >

@@ -13,6 +13,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DnsSetupPanel } from "@/components/dns/dns-setup-panel";
 import { api } from "@/lib/api/client";
+import { readPendingDomain } from "@/lib/scene/address";
 import { ApiClientError } from "@/lib/api/errors";
 import { useAuth } from "@/lib/auth/auth-context";
 import { PLANS } from "@/lib/constants/plans";
@@ -83,8 +84,8 @@ export default function OnboardingPage() {
   const current = state.currentStep;
 
   return (
-    <div className="min-h-full bg-surface">
-      <header className="border-b border-border bg-white">
+    <div className="min-h-screen w-full bg-background">
+      <header className="border-b border-border bg-surface">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
           <p className="text-sm font-semibold text-ink">Setup guide</p>
           <Link href="/dashboard" className="text-sm text-muted hover:text-ink">
@@ -105,9 +106,9 @@ export default function OnboardingPage() {
                   type="button"
                   className={cn(
                     "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
-                    active && "border-ink bg-ink text-white",
-                    done && !active && "border-[color-mix(in_srgb,#16FF00_50%,#e5e7eb)] bg-[color-mix(in_srgb,#16FF00_12%,white)] text-ink",
-                    !done && !active && "border-border bg-white text-muted",
+                    active && "border-ink bg-ink text-[#0a0c0b]",
+                    done && !active && "border-accent/40 bg-accent/10 text-accent",
+                    !done && !active && "border-border bg-surface text-muted",
                   )}
                   onClick={() => stepMutation.mutate(s.id)}
                 >
@@ -118,7 +119,7 @@ export default function OnboardingPage() {
           })}
         </ol>
 
-        <div className="mt-8 rounded-md border border-border bg-white p-6">
+        <div className="mt-8 rounded-md border border-border bg-surface p-6">
           {current === "account" || current === "business" ? (
             <StepDone
               title="Account ready"
@@ -235,7 +236,10 @@ function DomainStep({ onDone }: { onDone: () => void }) {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<DomainFormValues>({ resolver: zodResolver(domainSchema) });
+  } = useForm<DomainFormValues>({
+    resolver: zodResolver(domainSchema),
+    defaultValues: { name: readPendingDomain() },
+  });
 
   async function onSubmit(values: DomainFormValues) {
     try {

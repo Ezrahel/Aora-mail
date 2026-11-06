@@ -1,34 +1,27 @@
 import type { Metadata } from "next";
+import { Reveal } from "@/components/landing/reveal";
 import { PricingCard } from "@/components/marketing/pricing-card";
 import { PLANS } from "@/lib/constants/plans";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "Business email plans for Nigerian SMEs. Starter, Business, and Pro — priced yearly in Naira.",
+  description: "Business email plans for Nigerian SMEs. Starter, Business, and Pro, priced yearly in Naira.",
 };
 
 export default function PricingPage() {
   return (
-    <div className="relative overflow-hidden">
-      <div className="absolute inset-0 mesh-bg-dark -z-10" />
-      <div className="mx-auto max-w-[1160px] px-4 sm:px-6 py-12 sm:py-16">
-        <div className="mx-auto max-w-2xl text-center">
-          <div className="inline-flex rounded-full glass px-3 py-1 text-xs font-semibold text-ink">Pricing</div>
-          <h1 className="mt-4 text-title text-ink">Transparent yearly plans.</h1>
-          <p className="mt-3 text-[15px] text-muted">Priced in Naira. No surprise add-ons for the basics — mailboxes, DNS guidance, and IMAP/SMTP access are included. Upgrade when your team grows.</p>
-        </div>
+    <div data-scene={4} className="mx-auto min-h-[100svh] max-w-[1240px] px-5 pb-24 pt-32 sm:px-8 sm:pt-40">
+      <p className="eyebrow rise">Pricing</p>
+      <h1 className="text-display rise mt-6 max-w-[44rem] text-ink" style={{ "--i": 1 } as React.CSSProperties}>Transparent yearly plans.</h1>
+      <p className="rise mt-6 max-w-[34rem] text-[17px] leading-7 text-muted" style={{ "--i": 2 } as React.CSSProperties}>
+        Priced in Naira. Mailboxes, DNS guidance and IMAP/SMTP access are included, with no surprise add-ons. Upgrade when your team grows.
+      </p>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
-          {PLANS.map((plan) => (
-            <PricingCard key={plan.id} plan={plan} />
-          ))}
-        </div>
-
-        <div className="mx-auto mt-10 max-w-3xl rounded-2xl glass p-4 flex items-center gap-3">
-          <span className="size-2 rounded-full bg-[#16FF00] shadow-[0_0_8px_rgba(22,255,0,0.5)]" />
-          <p className="text-sm text-ink">Plan limits and pricing are configurable and may change. Final entitlements are confirmed at checkout.</p>
-        </div>
+      <div className="mt-14 grid gap-4 md:grid-cols-3">
+        {PLANS.map((plan, index) => <Reveal key={plan.id} delay={index * 0.07}><PricingCard plan={plan} /></Reveal>)}
       </div>
+
+      <p className="mt-6 flex items-start gap-2.5 text-sm text-muted"><span className="live-dot mt-1.5" />Plan limits and pricing are configurable and may change. Final entitlements are confirmed at checkout.</p>
     </div>
   );
 }
