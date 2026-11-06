@@ -4,7 +4,7 @@ export const SITE = {
   tagline: "Business email, made clear.",
   description:
     "Professional business email on your own domain, with clear setup and control for your team.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://aora.ng",
+  url: (process.env.NEXT_PUBLIC_SITE_URL || "https://aora.ng").replace(/\/+$/, ""),
   supportEmail: "support@aora.ng",
   locale: "en-NG",
   currency: "NGN",

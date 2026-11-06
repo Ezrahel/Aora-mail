@@ -3,11 +3,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Journey } from "@/components/landing/journey";
 import { buttonClasses } from "@/components/ui/button";
+import { publicPage } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
-  title: "How it works",
-  description: "Choose a plan, connect your domain, create mailboxes, and start sending business email.",
-};
+export const metadata: Metadata = publicPage({
+  title: "How to Set Up Business Email on Your Domain",
+  description: "Set up business email in four guided steps: choose a plan, connect your domain, create your mailboxes and start sending. No IT team needed.",
+  path: "/how-it-works",
+});
 
 export default function HowItWorksPage() {
   return (

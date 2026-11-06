@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { faqGraph, JsonLd } from "@/lib/seo/json-ld";
+import { publicPage } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
-  title: "FAQ",
-  description: "Answers about business email, domains, DNS, clients, and billing.",
-};
+export const metadata: Metadata = publicPage({
+  title: "Business Email FAQ",
+  description: "Straight answers about business email: using your own domain, DNS setup, mailbox limits, Outlook and Apple Mail, migration and cancellation.",
+  path: "/faq",
+});
 
 const FAQS: Array<{ q: string; a: string }> = [
   { q: "What is business email?", a: "Business email is email on your own domain — for example info@yourcompany.ng — so customers recognize and trust your messages. It's the difference between looking established and looking temporary." },
@@ -19,6 +22,7 @@ const FAQS: Array<{ q: string; a: string }> = [
 export default function FaqPage() {
   return (
     <div data-scene={5} className="mx-auto min-h-[100svh] max-w-[1240px] px-5 pb-24 pt-[42svh] sm:px-8 lg:pt-40">
+      <JsonLd data={faqGraph(FAQS)} />
       <div className="max-w-[40rem]">
         <p className="eyebrow rise">FAQ</p>
         <h1 className="text-display rise mt-6 text-ink" style={{ "--i": 1 } as React.CSSProperties}>Straight answers.</h1>

@@ -10,8 +10,18 @@ import { PricingCard } from "@/components/marketing/pricing-card";
 import { buttonClasses } from "@/components/ui/button";
 import { PLANS } from "@/lib/constants/plans";
 import { SITE } from "@/lib/constants/site";
+import { formatNaira } from "@/lib/formatting";
+import { publicPage } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = { title: "Professional business email", description: SITE.description };
+const startingPrice = formatNaira(Math.min(...PLANS.map((plan) => plan.priceYearlyNgn)));
+
+export const metadata: Metadata = publicPage({
+  title: `${SITE.name} | Professional Business Email for Nigerian Businesses`,
+  absoluteTitle: true,
+  description: `Professional email on your own domain, with guided DNS setup and simple mailbox management. Plans from ${startingPrice} a year, priced in Naira.`,
+  path: "/",
+  sharedCard: true,
+});
 
 export default function HomePage() {
   return <>
